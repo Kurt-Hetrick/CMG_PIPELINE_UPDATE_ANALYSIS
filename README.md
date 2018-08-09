@@ -51,12 +51,6 @@ _SUMMER OF 2018_
 During the course of the 6+ Year study, the capture product has changed.
 GVCF files are only generated for the SUPER BAIT file for the capture performed per individual (not both, not for all reads).
 
-Sample count 2536 (entire call set includes hapmap controls with technical duplicates)
-
-* Agilent_ClinicalExome_S06588914=1,074
-* Agilent_51Mb_v4_S03723314=1,461
-* Unknown=1
-
 * reasoning is that reads that are way off what is a possible capture would be enriched for false positives and can negatively impact vqsr for sites that are actually part of another capture (or create false positives).
 
 * candidate/putative variants
@@ -64,6 +58,11 @@ Sample count 2536 (entire call set includes hapmap controls with technical dupli
 	* in both targets+75bp pads.
 	* only in target+75bp pad
 	* only in superbait file for product.
+
+**Sample count is 2536 (entire call set includes hapmap controls with technical duplicates)**
+
+* _Agilent_ClinicalExome_S06588914=1,075_
+* _Agilent_51Mb_v4_S03723314=1,461_
 
 3. UPDATED COUNT OF CANDIDATE VARIANT CHROMOSOME COUNT.
 

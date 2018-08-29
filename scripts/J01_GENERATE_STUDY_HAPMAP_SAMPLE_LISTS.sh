@@ -43,7 +43,7 @@
 # REMOVE THE STANDARD VCF COLUMNS
 # KEEP ONLY THOSE SAMPLE NAMES THAT START WITH "NA" OR "HG"
 
-	egrep -m 1 '^#CHROM' $CORE_PATH'/'$PROJECT_MS'/MULTI_SAMPLE/'$PREFIX'.BEDsuperset.VQSR.vcf.gz' \
+	zegrep -m 1 '^#CHROM' $CORE_PATH'/'$PROJECT_MS'/MULTI_SAMPLE/'$PREFIX'.BEDsuperset.VQSR.vcf.gz' \
 		| sed 's/\t/\n/g' \
 		| awk 'NR>9 {print $0}' \
 		| egrep '^NA|^HG' \
@@ -54,7 +54,7 @@
 # REMOVE THE STANDARD VCF COLUMNS
 # KEEP ONLY THOSE SAMPLE NAMES THAT DO NOT START WITH "NA" OR "HG"
 
-	egrep -m 1 '^#CHROM' $CORE_PATH'/'$PROJECT_MS'/MULTI_SAMPLE/'$PREFIX'.BEDsuperset.VQSR.vcf.gz' \
+	zegrep -m 1 '^#CHROM' $CORE_PATH'/'$PROJECT_MS'/MULTI_SAMPLE/'$PREFIX'.BEDsuperset.VQSR.vcf.gz' \
 		| sed 's/\t/\n/g' \
 		| awk 'NR>9 {print $0}' \
 		| egrep -v '^NA|^HG' \

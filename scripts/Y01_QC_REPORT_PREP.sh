@@ -96,8 +96,9 @@ echo
 				-v PU_FIELD="$PU_FIELD" \
 				-v LB_FIELD="$LB_FIELD" \
 				'BEGIN {OFS="\t"} {split($SM_FIELD,SMtag,":"); split($PU_FIELD,PU,":"); split($LB_FIELD,Library,":"); split(Library[2],Library_Unit,"_"); \
-				print "'$PROJECT_SAMPLE'",SMtag[2],PU[2],Library[2],Library_Unit[1],Library_Unit[2],substr(Library_Unit[2],1,1),substr(Library_Unit[2],2,2),\
+				print "'$PROJECT'",SMtag[2],PU[2],Library[2],Library_Unit[1],Library_Unit[2],substr(Library_Unit[2],1,1),substr(Library_Unit[2],2,2),\
 				Library_Unit[3],Library_Unit[4],substr(Library_Unit[4],1,1),substr(Library_Unit[4],2,2)}' \
+			| awk 'BEGIN { FS = OFS = "\t" } { for(i=1; i<=NF; i++) if($i ~ /^ *$/) $i = "NA" }; 1' \
 			| $DATAMASH_DIR/datamash \
 				-s \
 				-g 1,2 \
@@ -269,7 +270,7 @@ echo
 		$36,$37,$38,$39,$40,$41,$42,$43,"NaN",$51,$52,$53,$54,$1,"NaN" ; \
 		else print $2,$3,$4,$12,($14/1000000000),$19,$21,$22,$23,$24,$25,$29,$31,$32,$33,$34,\
 		$36,$37,$38,$39,$40,$41,$42,$43,$44,$51,$52,$53,$54,$1,$26}' \
-		$CORE_PATH/$PROJECT/REPORTS/HYB_SELECTION/$SM_TAG"_hybridization_selection_metrics.txt" \
+		$CORE_PATH/$PROJECT_SAMPLE/REPORTS/HYB_SELECTION/$SM_TAG"_hybridization_selection_metrics.txt" \
 		| $DATAMASH_DIR/datamash transpose \
 		>> $CORE_PATH/$PROJECT_MS/TEMP/QC_REPORT_PREP_$PREFIX/$SM_TAG".QC_REPORT_TEMP.txt"
 

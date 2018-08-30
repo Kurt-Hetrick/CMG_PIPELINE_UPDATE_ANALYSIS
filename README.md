@@ -36,6 +36,12 @@ _SUMMER OF 2018_
 	* and more...
 	* qc reports done for submission batches as well as the entire study done every submission.
 
+## UNEXPECTED CHALLENGES ENCOUNTERED.
+
+* cannot create gvcf files specific to capture product b/c either combinegvcfs or genotypegvcfs crash
+
+	* had to create gvcf files with union of capture products super bait file
+
 
 ## ANALYSIS PLANS
 
@@ -49,26 +55,49 @@ _SUMMER OF 2018_
 2. BY CAPTURE PRODUCT
 
 During the course of the 6+ Year study, the capture product has changed.
-GVCF files are only generated for the SUPER BAIT file for the capture performed per individual (not both, not for all reads).
+~~GVCF files are only generated for the SUPER BAIT file for the capture performed per individual (not both, not for all reads).~~
+	
+* **this is no longer feasible**
 
-* reasoning is that reads that are way off what is a possible capture would be enriched for false positives and can negatively impact vqsr for sites that are actually part of another capture (or create false positives).
+* ~~reasoning is that reads that are way off what is a possible capture would be enriched for false positives and can negatively impact vqsr for sites that are actually part of another capture (or create false positives).~~
 
 * candidate/putative variants
 
-	* in both targets+75bp pads.
-	* only in target+75bp pad
+	**There are 215 unique variant records**
+		**181 SNPS**
+		**34 INDELS**
+
 	* only in superbait file for product.
+		* CLINICAL EXOME CAPTURES ALL OF THEM
+		* AGILENT VERSION 4 CAPTURES 212 OF THEM (MISSES 3 SNPS)
+
+	* only in target+75bp pad
+		* CLINICAL EXOME MISSES ONE SNP
+		* AGILENT VERSION 5 CAPTURES HAS NO DIFFERENCE WITH THE SUPER BAIT BED FILE (MISSES 3 SNPS)
+
+	* only in target NO PADDING
+		* CLINICAL EXOME MISSES 15 SNPS
+		* AGILENT VERSION 4 CAPTURES MISSES 5 SNPS (2 MORE THAN WHAT'S MISSED IN THE BAIT SUPER BED FILE)
 
 **Sample count is 2536 (entire call set includes hapmap controls with technical duplicates)**
 
 * _Agilent_ClinicalExome_S06588914=1,075_
 * _Agilent_51Mb_v4_S03723314=1,461_
 
+
 3. UPDATED COUNT OF CANDIDATE VARIANT CHROMOSOME COUNT.
 
 * what is the count based off of phenodb versus what is the count the joint called vcf.
 
-4. Things that I've done in the past that I probably will not prioritize.
+4. GROSS METRICS
+
+* cohort ti/tv
+* bait counts
+* snp counts
+* indel counts
+* mixed counts
+
+5. Things that I've done in the past that I probably will not prioritize.
 
 * technical duplicate reproducibility
 * mendelian inheritance

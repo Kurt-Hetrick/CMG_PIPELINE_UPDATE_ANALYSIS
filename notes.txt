@@ -1,0 +1,134 @@
+
+###############################################
+# GRAB SOLVED CASES FROM PHENODB AND REFORMAT #
+###############################################
+
+1. in phenodb search/goto;
+	## "waiting for report to be issued." click on link
+
+2. go to the bottom of page
+	## Download submissions final results table as tab-delimited text
+
+
+
+3. TO REFORMAT the above output;
+
+sed '/^$/d' FinalResultsSearch-28August2018.txt \
+| egrep -v "Date|Submission" \
+| awk 'BEGIN {FS="\t";OFS="\t"} $15!="" {print $2,$3,$4,$6,$7,$8,$1,$15} $15=="" {print $2,$3,$4,$6,$7,$8,$1,"NOT_LISTED"}' \
+| sed 's/chr//g' \
+| sed 's/,//g' \
+| sort -k 1,1 -k2,2n -k3,3n \
+| datamash -g 1,2,3,4,5,6 collapse 7 collapse 8 \
+> FinalResultsSearch-28August2018.REFORMATED.txt
+
+4. CONVERT TO BED FILE WITH 5 BP PADDING FOR INDELS;
+
+awk 'BEGIN {OFS="\t"} $6=="SNV" {print $1,$2-1,$3,$4"->"$5"|"$7} $6=="Indel" {print $1,$2-5,$3+5,$4"->"$5"|"$7}' FinalResultsSearch-28August2018.REFORMATED.txt \
+> FinalResultsSearch-28August2018.REFORMATED.5bpPAD.bed
+
+5. same as above, but explicitly make one for SNVs and another for Indels b/c snvs are easy and indels are not.
+
+	## SNP
+
+awk 'BEGIN {OFS="\t"} $6=="SNV" {print $1,$2-1,$3,$4"->"$5"|"$7}' FinalResultsSearch-28August2018.REFORMATED.txt \
+> FinalResultsSearch-28August2018.REFORMATED.SNV.bed
+
+	## INDEL
+
+awk 'BEGIN {OFS="\t"} $6=="Indel" {print $1,$2-5,$3+5,$4"->"$5"|"$7}' FinalResultsSearch-28August2018.REFORMATED.txt \
+> FinalResultsSearch-28August2018.REFORMATED.INDEL.5bpPAD.bed
+
+######################################################################
+# CHECK IF THERE ARE VARIANTS THAT ARE SPECIFIC TO A CAPTURE PRODUCT #
+######################################################################
+
+1. OVERALL HOW MANY VARIANTS
+
+> wc -l FinalResultsSearch-28August2018.REFORMATED.5bpPAD.bed
+215 FinalResultsSearch-28August2018.REFORMATED.5bpPAD.bed
+
+2. HOW MANY SNPS
+
+> wc -l FinalResultsSearch-28August2018.REFORMATED.SNV.bed
+181 FinalResultsSearch-28August2018.REFORMATED.SNV.bed
+
+3. HOW MANY INDELS
+
+> wc -l FinalResultsSearch-28August2018.REFORMATED.INDEL.5bpPAD.bed
+34 FinalResultsSearch-28August2018.REFORMATED.INDEL.5bpPAD.bed
+
+################################################################
+
+4. HOW MANY VARIANTS ARE ON THE agilent version 4 super bed file.
+
+> bedtools intersect -wa -a FinalResultsSearch-28August2018.REFORMATED.5bpPAD.bed -b /mnt/research/active/M_Valle_MD_SeqWholeExome_120417_1_NEW/BED_Files/Baits_BED_File_Agilent_51Mb_v4_S03723314_ALL_Merged_111912_NOCHR.bed | wc -l
+212
+
+5. HOW MANY SNPS ARE ON THE agilent version 4 super bed file.
+
+> bedtools intersect -wa -a FinalResultsSearch-28August2018.REFORMATED.SNV.bed -b /mnt/research/active/M_Valle_MD_SeqWholeExome_120417_1_NEW/BED_Files/Baits_BED_File_Agilent_51Mb_v4_S03723314_ALL_Merged_111912_NOCHR.bed | wc -l
+178
+
+#################################################################
+
+6. HOW MANY VARIANTS ARE IN THE AGILENT CLINICAL EXOME super bed file
+
+> bedtools intersect -wa -a FinalResultsSearch-28August2018.REFORMATED.5bpPAD.bed -b /mnt/research/active/M_Valle_MD_SeqWholeExome_120417_1_NEW/BED_Files/Baits_BED_Files_Agilent_ClinicalExome_S06588914_ALLBED_merged_noCHR_NoYPAR_052616.bed | wc -l
+215
+
+#################################################################
+
+7. HOW MANY VARIANTS ARE IN THE AGILENT CLINICAL EXOME TARGET BED FILE WITH A 75 BP PAD ADDED.
+
+> awk 'BEGIN {OFS="\t"} {print $1,$2-75,$3+75}' \
+/mnt/research/active/M_Valle_MD_SeqWholeExome_120417_1_NEW/BED_Files/Targets_BED_Files_Agilent_ClinicalExome_S06588914_OnTarget_merged_noCHR_noYPAR_052616.bed \
+| bedtools intersect -wa -a FinalResultsSearch-28August2018.REFORMATED.5bpPAD.bed -b - \
+| wc -l
+214
+
+8. HOW MANY SNPS ARE IN THE AGILENT CLINICAL EXOME TARGET BED FILE WITH A 75 BP PAD ADDED.
+
+> awk 'BEGIN {OFS="\t"} {print $1,$2-75,$3+75}' /mnt/research/active/M_Valle_MD_SeqWholeExome_120417_1_NEW/BED_Files/Targets_BED_Files_Agilent_ClinicalExome_S06588914_OnTarget_merged_noCHR_noYPAR_052616.bed | bedtools intersect -wa -a FinalResultsSearch-28August2018.REFORMATED.SNV.bed -b - | wc -l
+180
+
+##################################################################
+
+9. HOW MANY VARIANTS ARE IN THE AGILENT VERSION 4 TARGET BED FILE WITH 75 BP ADDED.
+
+> awk 'BEGIN {OFS="\t"} {print $1,$2-75,$3+75}' /mnt/research/active/M_Valle_MD_SeqWholeExome_120417_1_NEW/BED_Files/Targets_BED_File_Agilent_51Mb_v4_S03723314_OnTarget_NoCHR_082812.bed | bedtools intersect -wa -a FinalResultsSearch-28August2018.REFORMATED.5bpPAD.bed -b - | wc -l
+212
+
+##################################################################
+
+10. HOW MANY VARIANTS ARE IN THE AGILENT CLINICAL EXOME TARGET BED FILE WITH NO PADDING
+
+> bedtools intersect -wa -a FinalResultsSearch-28August2018.REFORMATED.5bpPAD.bed -b /mnt/research/active/M_Valle_MD_SeqWholeExome_120417_1_NEW/BED_Files/Targets_BED_Files_Agilent_ClinicalExome_S06588914_OnTarget_merged_noCHR_noYPAR_052616.bed | wc -l
+200
+
+11. HOW MANY SNPS ARE IN THE AGILENT CLINICAL EXOME TARGET BED FILE WITH NO PADDING
+
+> bedtools intersect -wa -a FinalResultsSearch-28August2018.REFORMATED.SNV.bed -b /mnt/research/active/M_Valle_MD_SeqWholeExome_120417_1_NEW/BED_Files/Targets_BED_Files_Agilent_ClinicalExome_S06588914_OnTarget_merged_noCHR_noYPAR_052616.bed | wc -l
+166
+
+12. HOW MANY INDELS ARE IN THE AGILENT CLINICAL EXOME TARGET BED FILE WITH NO PADDING
+
+> bedtools intersect -wa -a FinalResultsSearch-28August2018.REFORMATED.INDEL.5bpPAD.bed -b /mnt/research/active/M_Valle_MD_SeqWholeExome_120417_1_NEW/BED_Files/Targets_BED_Files_Agilent_ClinicalExome_S06588914_OnTarget_merged_noCHR_noYPAR_052616.bed | wc -l
+34
+
+##################################################################
+
+13. HOW MANY VARIANTS ARE IN THE AGILENT VERSION 4 TARGET BED FILE WITH NO PADDING
+
+> bedtools intersect -wa -a FinalResultsSearch-28August2018.REFORMATED.5bpPAD.bed -b /mnt/research/active/M_Valle_MD_SeqWholeExome_120417_1_NEW/BED_Files/Targets_BED_File_Agilent_51Mb_v4_S03723314_OnTarget_NoCHR_082812.bed | wc -l
+210
+
+14. HOW MANY SNPS ARE IN THE AGILENT VERSION 4 TARGET BED FILE WITH NO PADDING
+
+> bedtools intersect -wa -a FinalResultsSearch-28August2018.REFORMATED.SNV.bed -b /mnt/research/active/M_Valle_MD_SeqWholeExome_120417_1_NEW/BED_Files/Targets_BED_File_Agilent_51Mb_v4_S03723314_OnTarget_NoCHR_082812.bed | wc -l
+176
+
+15. HOW MANY SNPS ARE IN THE AGILENT VERSION 4 TARGET BED FILE WITH NO PADDING
+
+> bedtools intersect -wa -a FinalResultsSearch-28August2018.REFORMATED.INDEL.5bpPAD.bed -b /mnt/research/active/M_Valle_MD_SeqWholeExome_120417_1_NEW/BED_Files/Targets_BED_File_Agilent_51Mb_v4_S03723314_OnTarget_NoCHR_082812.bed | wc -l
+34

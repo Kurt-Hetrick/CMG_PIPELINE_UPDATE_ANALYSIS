@@ -63,19 +63,19 @@ During the course of the 6+ Year study, the capture product has changed.
 
 * candidate/putative variants
 
-	**There are 215 unique variant records**
-		**181 SNPS**
-		**34 INDELS**
+	* **There are 215 unique variant records**
+		* **181 SNPS**
+		* **34 INDELS**
 
-	* only in superbait file for product.
+	* _only in superbait file for product_
 		* CLINICAL EXOME CAPTURES ALL OF THEM
 		* AGILENT VERSION 4 CAPTURES 212 OF THEM (MISSES 3 SNPS)
 
-	* only in target+75bp pad
+	* _only in target+75bp pad_
 		* CLINICAL EXOME MISSES ONE SNP
-		* AGILENT VERSION 5 CAPTURES HAS NO DIFFERENCE WITH THE SUPER BAIT BED FILE (MISSES 3 SNPS)
+		* AGILENT VERSION 4 CAPTURE HAS NO DIFFERENCE WITH THE SUPER BAIT BED FILE (MISSES 3 SNPS)
 
-	* only in target NO PADDING
+	* _only in target NO PADDING_
 		* CLINICAL EXOME MISSES 15 SNPS
 		* AGILENT VERSION 4 CAPTURES MISSES 5 SNPS (2 MORE THAN WHAT'S MISSED IN THE BAIT SUPER BED FILE)
 

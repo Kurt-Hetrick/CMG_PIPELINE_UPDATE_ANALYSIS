@@ -132,3 +132,44 @@ awk 'BEGIN {OFS="\t"} $6=="Indel" {print $1,$2-5,$3+5,$4"->"$5"|"$7}' FinalResul
 
 > bedtools intersect -wa -a FinalResultsSearch-28August2018.REFORMATED.INDEL.5bpPAD.bed -b /mnt/research/active/M_Valle_MD_SeqWholeExome_120417_1_NEW/BED_Files/Targets_BED_File_Agilent_51Mb_v4_S03723314_OnTarget_NoCHR_082812.bed | wc -l
 34
+
+################################
+# CHECKING CANDIDATE SNPS LOCI #
+################################
+
+1. CHECK THE NEW VCF FOR THE CANDIDATE SNPS
+
+> awk '{print "tabix",\
+"/mnt/research/active/M_Valle_MD_SeqWholeExome_120417_1/MULTI_SAMPLE/M_Valle_20180803_2536samples/M_Valle_20180803_2536samples.BEDsuperset.VQSR.vcf.gz",$1":"$3"-"$3}' \
+FinalResultsSearch-28August2018.REFORMATED.SNV.bed \
+| bash \
+| cut -f 1-8 \
+| egrep "VariantType=SNP|VariantType=MULTIALLELIC_SNP" \
+| awk 'BEGIN {OFS="\t"} {print $1,$2-1,$2,$3,$4"->"$5,$6,$7,$8}' \
+| bedtools intersect -wao -a FinalResultsSearch-28August2018.REFORMATED.SNV.bed -b - \
+| sed 's/|/\t/g' \
+>| FinalResultsSearch-28August2018.REFORMATED.SNV.bed.vcf.old.txt
+
+	A. THERE SHOULD BE 181 RECORDS
+
+	> wc -l FinalResultsSearch-28August2018.REFORMATED.SNV.bed.vcf.txt
+	181 FinalResultsSearch-28August2018.REFORMATED.SNV.bed.vcf.txt
+
+	B. DO THEY ALL PASS THE 99.9% CUT-OFF
+
+	C. DO THE REF/ALT ALLELES MATCH
+
+> awk 'BEGIN {OFS="\t"} $4!=$10 {print $1,$2,$3,$4,$6,$7,$8,$9,$10,$11,$12}' FinalResultsSearch-28August2018.REFORMATED.SNV.bed.vcf.txt
+1       152083915       152083916       C->T    1       152083915       152083916       .       C->T,*  6403.56 PASS
+16      15809105        15809106        G->C    16      15809105        15809106        rs148621523     G->C,A  3040.29 PASS
+
+# These do actually match given that the first variant is now part of a spanning deletion in the cohort.
+# The 2nd variant just has two separate substitutions in the cohort
+
+
+> awk '{print "tabix","/mnt/research/active/M_Valle_MD_SeqWholeExome_120417_1_NEW/MULTI_SAMPLE/M_Valle_MD_SeqWholeExome_120417_1_NEW_2536.BEDsuperset.VQSR.vcf.gz",$1":"$3"-"$3}' FinalResultsSearch-28August2018.REFORMATED.SNV.bed | bash | cut -f 1-8 | egrep "VariantType=SNP|VariantType=MULTIALLELIC_SNP" | awk 'BEGIN {OFS="\t"} {print $1,$2-1,$2,$3,$4"->"$5,$6,$7,$8}' | bedtools intersect -wao -a FinalResultsSearch-28August2018.REFORMATED.SNV.bed -b - | sed 's/|/\t/g' >| FinalResultsSearch-28August2018.REFORMATED.SNV.bed.vcf.txt
+
+
+
+
+

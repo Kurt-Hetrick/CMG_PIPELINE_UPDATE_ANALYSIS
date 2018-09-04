@@ -89,6 +89,10 @@ During the course of the 6+ Year study, the capture product has changed.
 
 * what is the count based off of phenodb versus what is the count the joint called vcf.
 
+	* **SNP CANDIDATE LOCI:**
+		* _NEW PIPELINE: ALL LOCI ARE PRESENT AND PASS THE 99.9% CUT-OFF._
+		* _OLD PIPELINE: 2 LOCI ARE NO LONGER EMITTED, BUT THE OTHER 179 PASS THE 99.9% CUT-OFF_
+
 4. GROSS METRICS
 
 * cohort ti/tv

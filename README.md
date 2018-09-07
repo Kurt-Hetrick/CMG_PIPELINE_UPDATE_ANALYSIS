@@ -47,10 +47,18 @@ _SUMMER OF 2018_
 
 1. RECALL RATES FOR CANDIDATE/PUTATIVE VARIANTS.
 * By tranche
-	* GATK best practice
+	* ~~GATK best practice~~
+		* given what I saw for the CF grant, it looks like best practices now matches what we are using for CMG (99.9% for both snps and indels)
 	* CIDR CMG cut-off
-	* PAST VQSR CUT-OFF
+	* PAST VQSR CUT-OFF (i.e. fail)
 	* MISSING
+
+			* **SNP CANDIDATE LOCI:**
+				* _NEW PIPELINE: ALL LOCI ARE PRESENT AND PASS THE 99.9% CUT-OFF._
+				* _OLD PIPELINE: 2 LOCI ARE NO LONGER EMITTED, BUT THE OTHER 179 PASS THE 99.9% CUT-OFF_
+				
+			* **INDEL CANDIDATE LOCI:**
+				* _NEW PIPELINE: ALL LOCI ARE PRESENT AND PASS TEH 99.9% CUT-OFF._
 
 2. BY CAPTURE PRODUCT
 
@@ -65,7 +73,10 @@ During the course of the 6+ Year study, the capture product has changed.
 
 	* **There are 215 unique variant records**
 		* **181 SNPS**
-		* **34 INDELS**
+		* **~~34 INDELS~~**
+			* **THERE ARE ACTUALLY 32 CANDIDATE INDEL LOCI**
+				* 1 IS A DUPLICATE (THE REPORT FOR ONE FAMILY HAD A DIFFERENT END POSITION, BUT IT IS ACTUALLY THE SAME AS ANOTHER FAMILY VARIANT)
+				* 1 IS A FALSE POSITIVE
 
 	* _only in superbait file for product_
 		* CLINICAL EXOME CAPTURES ALL OF THEM
@@ -88,10 +99,6 @@ During the course of the 6+ Year study, the capture product has changed.
 3. UPDATED COUNT OF CANDIDATE VARIANT CHROMOSOME COUNT.
 
 * what is the count based off of phenodb versus what is the count the joint called vcf.
-
-	* **SNP CANDIDATE LOCI:**
-		* _NEW PIPELINE: ALL LOCI ARE PRESENT AND PASS THE 99.9% CUT-OFF._
-		* _OLD PIPELINE: 2 LOCI ARE NO LONGER EMITTED, BUT THE OTHER 179 PASS THE 99.9% CUT-OFF_
 
 4. GROSS METRICS
 

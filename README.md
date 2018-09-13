@@ -74,9 +74,12 @@ During the course of the 6+ Year study, the capture product has changed.
 	* **There are 215 unique variant records**
 		* **181 SNPS**
 		* **~~34 INDELS~~**
-			* **THERE ARE ACTUALLY 32 CANDIDATE INDEL LOCI**
+			* **THERE ARE ACTUALLY 30 CANDIDATE INDEL LOCI**
 				* 1 IS A DUPLICATE (THE REPORT FOR ONE FAMILY HAD A DIFFERENT END POSITION, BUT IT IS ACTUALLY THE SAME AS ANOTHER FAMILY VARIANT)
 				* 1 IS A FALSE POSITIVE
+				* 2 ARE FROM A BUG IN UNIFIED GENOTYPER
+				* _ALSO 2 ARE MULTI-ALLELIC_
+					* MANUALLY CONFIRMED
 
 	* _only in superbait file for product_
 		* CLINICAL EXOME CAPTURES ALL OF THEM
@@ -100,13 +103,13 @@ During the course of the 6+ Year study, the capture product has changed.
 
 * what is the count based off of phenodb versus what is the count the joint called vcf.
 
-4. GROSS METRICS
+4. ~~GROSS METRICS (not really a priority since I've done everything at the per sample level. no real plans to do this)
 
 * cohort ti/tv
 * bait counts
 * snp counts
 * indel counts
-* mixed counts
+* mixed counts~~
 
 5. Things that I've done in the past that I probably will not prioritize.
 

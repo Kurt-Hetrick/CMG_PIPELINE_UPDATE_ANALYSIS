@@ -45,27 +45,25 @@ TARGET_BED=$7
 
 START_SAMPLE_PASS_TARGET_SNP=`date '+%s'`
 
-CMD=$JAVA_1_8'/java -jar'
-CMD=$CMD' '$GATK_DIR'/GenomeAnalysisTK.jar'
-CMD=$CMD' -T SelectVariants'
-CMD=$CMD' --disable_auto_index_creation_and_locking_when_reading_rods'
-CMD=$CMD' -R '$REF_GENOME
-CMD=$CMD' --variant '$CORE_PATH'/'$PROJECT_SAMPLE'/VCF/RELEASE/FILTERED_ON_BAIT/'$SM_TAG'_MS_OnBait.vcf.gz'
-CMD=$CMD' -o '$CORE_PATH'/'$PROJECT_SAMPLE'/SNV/RELEASE/FILTERED_ON_TARGET/'$SM_TAG'_MS_OnTarget_SNV.vcf.gz'
-CMD=$CMD' -selectType SNP'
-CMD=$CMD' --keepOriginalAC'
-CMD=$CMD' -ef'
-CMD=$CMD' -env'
-CMD=$CMD' -sn '$SM_TAG
-CMD=$CMD' -L '$TARGET_BED
+	CMD=$JAVA_1_8'/java -jar'
+	CMD=$CMD' '$GATK_DIR'/GenomeAnalysisTK.jar'
+	CMD=$CMD' -T SelectVariants'
+	CMD=$CMD' --disable_auto_index_creation_and_locking_when_reading_rods'
+	CMD=$CMD' -R '$REF_GENOME
+	CMD=$CMD' --variant '$CORE_PATH'/'$PROJECT_SAMPLE'/VCF/RELEASE/FILTERED_ON_BAIT/'$SM_TAG'_MS_OnBait.vcf.gz'
+	CMD=$CMD' -o '$CORE_PATH'/'$PROJECT_SAMPLE'/SNV/RELEASE/FILTERED_ON_TARGET/'$SM_TAG'_MS_OnTarget_SNV.vcf.gz'
+	CMD=$CMD' -selectType SNP'
+	CMD=$CMD' --keepOriginalAC'
+	CMD=$CMD' -ef'
+	CMD=$CMD' -env'
+	CMD=$CMD' -sn '$SM_TAG
+	CMD=$CMD' -L '$TARGET_BED
 
 echo $CMD >> $CORE_PATH/$PROJECT_SAMPLE/COMMAND_LINES/$SM_TAG".COMMAND.LINES.txt"
 echo >> $CORE_PATH/$PROJECT_SAMPLE/COMMAND_LINES/$SM_TAG".COMMAND.LINES.txt"
 echo $CMD | bash
 
 END_SAMPLE_PASS_TARGET_SNP=`date '+%s'`
-
-HOSTNAME=`hostname`
 
 echo $PROJECT_SAMPLE",L01,SAMPLE_PASS_TARGET_SNP,"$HOSTNAME","$START_SAMPLE_PASS_TARGET_SNP","$END_SAMPLE_PASS_TARGET_SNP \
 >> $CORE_PATH/$PROJECT_SAMPLE/REPORTS/$PROJECT_SAMPLE".JOINT.CALL.WALL.CLOCK.TIMES.csv"

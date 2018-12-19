@@ -44,8 +44,8 @@ START_ANNOTATE_RARE_BIALLELIC=`date '+%s'`
 	CMD=$CMD' -T VariantAnnotator'
 	CMD=$CMD' --disable_auto_index_creation_and_locking_when_reading_rods'
 	CMD=$CMD' -R '$REF_GENOME
-	CMD=$CMD' --variant '$CORE_PATH'/'$PROJECT_MS'/MULTI_SAMPLE/'$PREFIX'.HC.SNP.INDEL.VQSR.RARE.BIALLELIC.'$BED_FILE_NAME'.vcf.gz'
-	CMD=$CMD' -L '$CORE_PATH'/'$PROJECT_MS'/MULTI_SAMPLE/'$PREFIX'.HC.SNP.INDEL.VQSR.RARE.BIALLELIC.'$BED_FILE_NAME'.vcf.gz'
+	CMD=$CMD' --variant '$CORE_PATH'/'$PROJECT_MS'/TEMP/'$PREFIX'.HC.SNP.INDEL.VQSR.RARE.BIALLELIC.'$BED_FILE_NAME'.vcf.gz'
+	CMD=$CMD' -L '$CORE_PATH'/'$PROJECT_MS'/TEMP/'$PREFIX'.HC.SNP.INDEL.VQSR.RARE.BIALLELIC.'$BED_FILE_NAME'.vcf.gz'
 	CMD=$CMD' -A SampleList'
 	CMD=$CMD' -o '$CORE_PATH'/'$PROJECT_MS'/TEMP/'$PREFIX'.HC.SNP.INDEL.VQSR.RARE.BIALLELIC.ANNOTATED.'$BED_FILE_NAME'.vcf.gz'
 
@@ -61,4 +61,4 @@ echo $PROJECT_MS",I01,ANNOTATE_RARE_BIALLELIC_"$BED_FILE_NAME","$HOSTNAME","$STA
 # check to see if the index is generated which should send an non-zero exit signal if not.
 # eventually, will want to check the exit signal above and push out whatever it is at the end. Not doing that today though.
 
-ls $CORE_PATH/$PROJECT_MS/MULTI_SAMPLE/$PREFIX".HC.SNP.INDEL.VQSR.RARE.BIALLELIC.ANNOTATED."$BED_FILE_NAME".vcf.gz.tbi"
+ls $CORE_PATH/$PROJECT_MS/TEMP/$PREFIX".HC.SNP.INDEL.VQSR.RARE.BIALLELIC.ANNOTATED."$BED_FILE_NAME".vcf.gz.tbi"

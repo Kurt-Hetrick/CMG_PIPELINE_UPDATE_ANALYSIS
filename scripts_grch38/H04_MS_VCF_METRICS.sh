@@ -46,13 +46,21 @@
 START_MS_VCF_METRICS=`date '+%s'`
 
 	CMD=$JAVA_1_8'/java -jar'
-	CMD=$CMD' '$GATK_DIR_4011'/gatk-package-4.0.1.1-local.jar'
+	CMD=$CMD' '$GATK_DIR_4011'/gatk-package-4.0.11.0-local.jar'
 	CMD=$CMD' CollectVariantCallingMetrics'
 	CMD=$CMD' --INPUT '$CORE_PATH'/'$PROJECT_MS'/MULTI_SAMPLE/'$PREFIX'.HC.SNP.INDEL.VQSR.vcf.gz'
 	CMD=$CMD' --DBSNP '$DBSNP_138_VCF
 	CMD=$CMD' --SEQUENCE_DICTIONARY '$REF_DICT
 	CMD=$CMD' --OUTPUT '$CORE_PATH'/'$PROJECT_MS'/MULTI_SAMPLE/'$PREFIX
 	CMD=$CMD' --THREAD_COUNT 4'
+
+# add text extension to files.
+
+	mv -v $CORE_PATH/$PROJECT_MS/MULTI_SAMPLE/$PREFIX".variant_calling_detail_metrics" \
+	$CORE_PATH/$PROJECT_MS/MULTI_SAMPLE/$PREFIX".variant_calling_detail_metrics.txt"
+
+	mv -v $CORE_PATH/$PROJECT_MS/MULTI_SAMPLE/$PREFIX".variant_calling_summary_metrics" \
+	$CORE_PATH/$PROJECT_MS/MULTI_SAMPLE/$PREFIX".variant_calling_summary_metrics.txt"
 
 START_MS_VCF_METRICS=`date '+%s'`
 

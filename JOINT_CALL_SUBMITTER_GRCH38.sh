@@ -20,7 +20,7 @@
 ###########################
 
 	# gcc is so that it can be pushed out to the compute nodes via qsub (-V)
-	module load gcc/5.1.0
+	module load gcc/7.2.0
 
 	# CHANGE SCRIPT DIR TO WHERE YOU HAVE HAVE THE SCRIPTS BEING SUBMITTED
 	SCRIPT_DIR="/mnt/research/tools/LINUX/00_GIT_REPO_KURT/01_ARCHIVE/CMG_PIPELINE_UPDATE_ANALYSIS/scripts_grch38"
@@ -92,7 +92,7 @@
 	TABIX_DIR="/mnt/research/tools/LINUX/TABIX/tabix-0.2.6"
 	R_DIRECTORY="/mnt/linuxtools/R/R-3.1.1/bin"
 	GATK_DIR_4011="/mnt/linuxtools/GATK/gatk-4.0.11.0"
-	PICARD_DIR="/mnt/linuxtools/PICARD/picard-2.17.0"
+	PICARD_DIR="/mnt/linuxtools/PICARD/picard-2.18.25"
 
 ##################
 # PIPELINE FILES #
@@ -106,8 +106,10 @@
 	AXIOM_VCF="/mnt/research/tools/PIPELINE_FILES/GRCh38_aux_files/Axiom_Exome_Plus.genotypes.all_populations.poly.hg38.vcf.gz"
 
 	KNOWN_SNPS="/mnt/research/tools/PIPELINE_FILES/GRCh38_aux_files/dbsnp_138.hg38.liftover.excluding_sites_after_129.vcf.gz"
+		# md5 85f3e9f0d5f30de2a046594b4ab4de86
 	VERACODE_CSV="/mnt/linuxtools/CIDRSEQSUITE/Veracode_hg18_hg19.csv"
 	MERGED_MENDEL_BED_FILE="/mnt/research/active/M_Valle_MD_SeqWholeExome_120417_1_GRCh38/BED_Files/BAITS_Merged_S03723314_S06588914.lift.hg38.collapsed.bed"
+		# 4aa700700812d52c19f97c584eaca918
 	REF_DICT="/mnt/shared_resources/public_resources/GRCh38DH/GRCh38_full_analysis_set_plus_decoy_hla.dict"
 	HG19_REF="/mnt/research/tools/PIPELINE_FILES/GATK_resource_bundle/2.8/hg19/ucsc.hg19.fasta"
 	HG38_TO_HG19_CHAIN="/mnt/shared_resources/public_resources/liftOver_chain/hg38ToHg19.over.chain"
@@ -187,43 +189,43 @@
 
 		FORMAT_AND_SCATTER_BAIT_BED ()
 		{
-		BED_FILE_PREFIX=(`echo BF`)
+			BED_FILE_PREFIX=(`echo BF`)
 
-			# make sure that there is EOF
-			# remove CARRIAGE RETURNS
-			# remove CHR PREFIXES (THIS IS FOR GRCH37)
-			# CONVERT VARIABLE LENGTH WHITESPACE FIELD DELIMETERS TO SINGLE TAB.
+				# make sure that there is EOF
+				# remove CARRIAGE RETURNS
+				# remove CHR PREFIXES (THIS IS FOR GRCH37)
+				# CONVERT VARIABLE LENGTH WHITESPACE FIELD DELIMETERS TO SINGLE TAB.
 
-				awk 1 $MERGED_MENDEL_BED_FILE | sed -r 's/\r//g ; s/chr//g ; s/[[:space:]]+/\t/g' \
-				>| $CORE_PATH/$PROJECT_MS/TEMP/BED_FILE_SPLIT/FORMATTED_BED_FILE.bed
+					awk 1 $MERGED_MENDEL_BED_FILE | sed -r 's/\r//g ; s/chr//g ; s/[[:space:]]+/\t/g' \
+					>| $CORE_PATH/$PROJECT_MS/TEMP/BED_FILE_SPLIT/FORMATTED_BED_FILE.bed
 
-				# SORT TO GRCH37 ORDER
-				(awk '$1~/^[0-9]/' $CORE_PATH/$PROJECT_MS/TEMP/BED_FILE_SPLIT/FORMATTED_BED_FILE.bed | sort -k1,1n -k2,2n | awk '{print "chr"$0}' ; \
-				 	awk '$1=="X"' $CORE_PATH/$PROJECT_MS/TEMP/BED_FILE_SPLIT/FORMATTED_BED_FILE.bed | sort -k 2,2n | awk '{print "chr"$0}' ; \
-				 	awk '$1=="Y"' $CORE_PATH/$PROJECT_MS/TEMP/BED_FILE_SPLIT/FORMATTED_BED_FILE.bed | sort -k 2,2n | awk '{print "chr"$0}' ; \
-				 	awk '$1=="MT"' $CORE_PATH/$PROJECT_MS/TEMP/BED_FILE_SPLIT/FORMATTED_BED_FILE.bed | sort -k 2,2n | awk '{print "chr"$0}') \
-				>| $CORE_PATH/$PROJECT_MS/TEMP/BED_FILE_SPLIT/FORMATTED_AND_SORTED_BED_FILE.bed
+					# SORT TO GRCH37 ORDER
+					(awk '$1~/^[0-9]/' $CORE_PATH/$PROJECT_MS/TEMP/BED_FILE_SPLIT/FORMATTED_BED_FILE.bed | sort -k1,1n -k2,2n | awk '{print "chr"$0}' ; \
+						awk '$1=="X"' $CORE_PATH/$PROJECT_MS/TEMP/BED_FILE_SPLIT/FORMATTED_BED_FILE.bed | sort -k 2,2n | awk '{print "chr"$0}' ; \
+						awk '$1=="Y"' $CORE_PATH/$PROJECT_MS/TEMP/BED_FILE_SPLIT/FORMATTED_BED_FILE.bed | sort -k 2,2n | awk '{print "chr"$0}' ; \
+						awk '$1=="MT"' $CORE_PATH/$PROJECT_MS/TEMP/BED_FILE_SPLIT/FORMATTED_BED_FILE.bed | sort -k 2,2n | awk '{print "chr"$0}') \
+					>| $CORE_PATH/$PROJECT_MS/TEMP/BED_FILE_SPLIT/FORMATTED_AND_SORTED_BED_FILE.bed
 
-			# Determining how many records will be in each mini-bed file.
-			# The +1 at the end is to round up the number of records per mini-bed file to ensure all records are captured.
-			# So the last mini-bed file will be smaller.
-			# IIRC. this statement isn't really true, but I don't feel like figuring it out right now. KNH
+				# Determining how many records will be in each mini-bed file.
+				# The +1 at the end is to round up the number of records per mini-bed file to ensure all records are captured.
+				# So the last mini-bed file will be smaller.
+				# IIRC. this statement isn't really true, but I don't feel like figuring it out right now. KNH
 
-				INTERVALS_DIVIDED=`wc -l $CORE_PATH/$PROJECT_MS/TEMP/BED_FILE_SPLIT/FORMATTED_AND_SORTED_BED_FILE.bed \
-					| awk '{print $1"/""'$NUMBER_OF_BED_FILES'"}' \
-					| bc \
-					| awk '{print $0+1}'`
+					INTERVALS_DIVIDED=`wc -l $CORE_PATH/$PROJECT_MS/TEMP/BED_FILE_SPLIT/FORMATTED_AND_SORTED_BED_FILE.bed \
+						| awk '{print $1"/""'$NUMBER_OF_BED_FILES'"}' \
+						| bc \
+						| awk '{print $0+1}'`
 
-				split -l $INTERVALS_DIVIDED -a 4 -d \
-					$CORE_PATH/$PROJECT_MS/TEMP/BED_FILE_SPLIT/FORMATTED_AND_SORTED_BED_FILE.bed \
-					$CORE_PATH/$PROJECT_MS/TEMP/BED_FILE_SPLIT/$BED_FILE_PREFIX
+					split -l $INTERVALS_DIVIDED -a 4 -d \
+						$CORE_PATH/$PROJECT_MS/TEMP/BED_FILE_SPLIT/FORMATTED_AND_SORTED_BED_FILE.bed \
+						$CORE_PATH/$PROJECT_MS/TEMP/BED_FILE_SPLIT/$BED_FILE_PREFIX
 
-			# ADD A .bed suffix to all of the now splitted files
+				# ADD A .bed suffix to all of the now splitted files
 
-				ls $CORE_PATH/$PROJECT_MS/TEMP/BED_FILE_SPLIT/$BED_FILE_PREFIX* \
-				| awk '{print "mv",$0,$0".bed"}' \
-				| bash
-			}
+					ls $CORE_PATH/$PROJECT_MS/TEMP/BED_FILE_SPLIT/$BED_FILE_PREFIX* \
+					| awk '{print "mv",$0,$0".bed"}' \
+					| bash
+		}
 
 	# UNIQUE THE SAMPLE INTO SAMPLE/PROJECT COMBOS AND CREATE A SAMPLE SHEET INTO 300 SAMPLE CHUNKS.
 
@@ -298,7 +300,7 @@
 	# CREATE_CHROMOSOME_LIST
 	FORMAT_AND_SCATTER_BAIT_BED
 	CREATE_GVCF_LIST
-	# RUN_LAB_PREP_METRICS
+	RUN_LAB_PREP_METRICS
 	echo sleep 0.1s
 
 #######################################################################
@@ -332,16 +334,16 @@
 				$BED_FILE_NAME
 		}
 
-# for BED_FILE in $(ls $CORE_PATH/$PROJECT_MS/TEMP/BED_FILE_SPLIT/BF*bed);
-# do
-# 	BED_FILE_NAME=$(basename $BED_FILE .bed)
-# 		for PGVCF_LIST in $(ls $CORE_PATH/$PROJECT_MS/TEMP/SPLIT_SS/*list)
-# 			do
-# 				PGVCF_LIST_NAME=$(basename $PGVCF_LIST .list)
-# 				COMBINE_GVCF
-# 				echo sleep 0.1s
-# 		done
-# done
+for BED_FILE in $(ls $CORE_PATH/$PROJECT_MS/TEMP/BED_FILE_SPLIT/BF*bed);
+do
+	BED_FILE_NAME=$(basename $BED_FILE .bed)
+		for PGVCF_LIST in $(ls $CORE_PATH/$PROJECT_MS/TEMP/SPLIT_SS/*list)
+			do
+				PGVCF_LIST_NAME=$(basename $PGVCF_LIST .list)
+				COMBINE_GVCF
+				echo sleep 0.1s
+		done
+done
 
 #####################################################################
 
@@ -422,16 +424,16 @@
 	# for each chunk of the original bed file, do combine gvcfs, then genotype gvcfs, then variant annotator
 	# then generate a string of all the variant annotator job names submitted
 
-# for BED_FILE in $(ls $CORE_PATH/$PROJECT_MS/TEMP/BED_FILE_SPLIT/BF*bed);
-# do
-# 	BED_FILE_NAME=$(basename $BED_FILE .bed)
-# 	BUILD_HOLD_ID_GENOTYPE_GVCF
-# 	GENOTYPE_GVCF
-# 	echo sleep 0.1s
-# 	VARIANT_ANNOTATOR
-# 	echo sleep 0.1s
-# 	GENERATE_CAT_VARIANTS_HOLD_ID
-# done
+for BED_FILE in $(ls $CORE_PATH/$PROJECT_MS/TEMP/BED_FILE_SPLIT/BF*bed);
+do
+	BED_FILE_NAME=$(basename $BED_FILE .bed)
+	BUILD_HOLD_ID_GENOTYPE_GVCF
+	GENOTYPE_GVCF
+	echo sleep 0.1s
+	VARIANT_ANNOTATOR
+	echo sleep 0.1s
+	GENERATE_CAT_VARIANTS_HOLD_ID
+done
 
 #########################################################
 #########################################################
@@ -578,16 +580,16 @@
 
 # call cat variants and vqsr
 
-	# CAT_VARIANTS
-	# echo sleep 0.1s
-	# VARIANT_RECALIBRATOR_SNV
-	# echo sleep 0.1s
-	# VARIANT_RECALIBRATOR_INDEL
-	# echo sleep 0.1s
-	# APPLY_RECALIBRATION_SNV
-	# echo sleep 0.1s
-	# APPLY_RECALIBRATION_INDEL
-	# echo sleep 0.1s
+	CAT_VARIANTS
+	echo sleep 0.1s
+	VARIANT_RECALIBRATOR_SNV
+	echo sleep 0.1s
+	VARIANT_RECALIBRATOR_INDEL
+	echo sleep 0.1s
+	APPLY_RECALIBRATION_SNV
+	echo sleep 0.1s
+	APPLY_RECALIBRATION_INDEL
+	echo sleep 0.1s
 
 ##################################################
 ##### ANNOTATE RARE VARIANTS WITH SAMPLE IDS #####
@@ -662,12 +664,12 @@
 
 # make calls
 
-	# SELECT_COMMON_BIALLELIC
-	# echo sleep 0.1s
-	# SELECT_MULTIALLELIC
-	# echo sleep 0.1s
-	# MS_VCF_METRICS
-	# echo sleep 0.1s
+	SELECT_COMMON_BIALLELIC
+	echo sleep 0.1s
+	SELECT_MULTIALLELIC
+	echo sleep 0.1s
+	MS_VCF_METRICS
+	echo sleep 0.1s
 
 # scatter the rare variants by bed file interval
 
@@ -725,15 +727,15 @@
 		COMBINE_VARIANTS_HOLD_ID=$COMBINE_VARIANTS_HOLD_ID'I'$HACK'_'$BED_FILE_NAME','
 	}
 
-# for BED_FILE in $(ls $CORE_PATH/$PROJECT_MS/TEMP/BED_FILE_SPLIT/BF*bed);
-# do
-# 	BED_FILE_NAME=$(basename $BED_FILE .bed)
-# 	SELECT_RARE_BIALLELIC
-# 	echo sleep 0.1s
-# 	ANNOTATE_SELECT_RARE_BIALLELIC
-# 	echo sleep 0.1s
-# 	GENERATE_COMBINE_VARIANTS_HOLD_ID
-# done
+for BED_FILE in $(ls $CORE_PATH/$PROJECT_MS/TEMP/BED_FILE_SPLIT/BF*bed);
+	do
+		BED_FILE_NAME=$(basename $BED_FILE .bed)
+		SELECT_RARE_BIALLELIC
+		echo sleep 0.1s
+		ANNOTATE_SELECT_RARE_BIALLELIC
+		echo sleep 0.1s
+		GENERATE_COMBINE_VARIANTS_HOLD_ID
+done
 
 	COMBINE_VARIANTS_VCF ()
 	{
@@ -759,8 +761,8 @@
 
 	# make calls
 
-		# COMBINE_VARIANTS_VCF
-		# echo sleep 0.1s
+		COMBINE_VARIANTS_VCF
+		echo sleep 0.1s
 
 #########################################################
 #########################################################
@@ -992,23 +994,23 @@
 
 # variant summary stat vcf breakouts
 
-	# GENERATE_STUDY_HAPMAP_SAMPLE_LISTS
-	# SELECT_SNVS_ALL
-	# echo sleep 0.1s
-	# SELECT_PASS_STUDY_ONLY_SNP
-	# echo sleep 0.1s
-	# SELECT_PASS_HAPMAP_ONLY_SNP
-	# echo sleep 0.1s
-	# SELECT_INDELS_ALL
-	# echo sleep 0.1s
-	# SELECT_PASS_STUDY_ONLY_INDELS
-	# echo sleep 0.1s
-	# SELECT_PASS_HAPMAP_ONLY_INDELS
-	# echo sleep 0.1s
-	# SELECT_SNVS_ALL_PASS
-	# echo sleep 0.1s
-	# SELECT_INDEL_ALL_PASS
-	# echo sleep 0.1s
+	GENERATE_STUDY_HAPMAP_SAMPLE_LISTS
+	SELECT_SNVS_ALL
+	echo sleep 0.1s
+	SELECT_PASS_STUDY_ONLY_SNP
+	echo sleep 0.1s
+	SELECT_PASS_HAPMAP_ONLY_SNP
+	echo sleep 0.1s
+	SELECT_INDELS_ALL
+	echo sleep 0.1s
+	SELECT_PASS_STUDY_ONLY_INDELS
+	echo sleep 0.1s
+	SELECT_PASS_HAPMAP_ONLY_INDELS
+	echo sleep 0.1s
+	SELECT_SNVS_ALL_PASS
+	echo sleep 0.1s
+	SELECT_INDEL_ALL_PASS
+	echo sleep 0.1s
 
 # #######################################################################
 # #######################################################################
@@ -1512,27 +1514,27 @@
 					# CLEAN UP
 
 						SETUP_AND_RUN_ANNOVAR_HG19 ()
-							{
-								echo \
-								qsub \
-									-S /bin/bash \
-									-cwd \
-									-V \
-									-q $ANNOVAR_QUEUE_LIST \
-									-p $PRIORITY \
-									-j y \
-									-pe slots 5 \
-									-R y \
-								-N J02A12_PHENODB_VCF_LIFTOVER_HG19_$UNIQUE_ID_SM_TAG \
-									-o $CORE_PATH/$PROJECT_MS/LOGS/$SM_TAG/J02A12_PHENODB_VCF_LIFTOVER_HG19_$SM_TAG".log" \
-								-hold_jid J02A12_PHENODB_VCF_LIFTOVER"_"$UNIQUE_ID_SM_TAG \
-								$SCRIPT_DIR/J02A12_PHENODB_VCF_LIFTOVER_HG19.sh \
-									$PROJECT_SAMPLE \
-									$SM_TAG \
-									$CIDRSEQSUITE_ANNOVAR_JAVA \
-									$CIDRSEQSUITE_DIR_4_0 \
-									$CORE_PATH
-							}
+						{
+							echo \
+							qsub \
+								-S /bin/bash \
+								-cwd \
+								-V \
+								-q $ANNOVAR_QUEUE_LIST \
+								-p $PRIORITY \
+								-j y \
+								-pe slots 5 \
+								-R y \
+							-N J02A12_PHENODB_VCF_LIFTOVER_HG19_$UNIQUE_ID_SM_TAG \
+								-o $CORE_PATH/$PROJECT_MS/LOGS/$SM_TAG/J02A12_PHENODB_VCF_LIFTOVER_HG19_$SM_TAG".log" \
+							-hold_jid J02A12_PHENODB_VCF_LIFTOVER"_"$UNIQUE_ID_SM_TAG \
+							$SCRIPT_DIR/J02A12_PHENODB_VCF_LIFTOVER_HG19.sh \
+								$PROJECT_SAMPLE \
+								$SM_TAG \
+								$CIDRSEQSUITE_ANNOVAR_JAVA \
+								$CIDRSEQSUITE_DIR_4_0 \
+								$CORE_PATH
+						}
 
 
 	# MAKE A QC REPORT FOR EACH SAMPLE
@@ -1612,8 +1614,8 @@ do
 	echo sleep 0.1s
 	PASSING_MIXED_ON_TARGET_BY_SAMPLE
 	echo sleep 0.1s
-	# LIFTOVER_PHENODB_VCF
-	# echo sleep 0.1s
+	LIFTOVER_PHENODB_VCF
+	echo sleep 0.1s
 	# SETUP_AND_RUN_ANNOVAR_HG19
 	# echo sleep 0.1s
 	QC_REPORT_PREP
@@ -1648,10 +1650,16 @@ done
 					"-M","cidr_sequencing_notifications@lists.johnshopkins.edu",\
 				"-N" , "Y01-Y01-END_PROJECT_TASKS_" "'$PREFIX'",\
 					"-o","'$CORE_PATH'" "/" "'$PROJECT_MS'" "/LOGS/Y01-Y01-" "'$PREFIX'" ".END_PROJECT_TASKS.log",\
-				"-hold_jid" , "Y_"$1,\
+				"-hold_jid" , "Y_" $1 ",A02-LAB_PREP_METRICS_" "'$PROJECT_MS'",\
 				"'$SCRIPT_DIR'" "/Y01-Y01_END_PROJECT_TASKS.sh",\
 					"'$CORE_PATH'",\
 					"'$DATAMASH_DIR'",\
 					"'$PROJECT_MS'",\
 					"'$PREFIX'",\
 					"'$SAMPLE_SHEET'" "\n" "sleep 0.1s"}'	
+
+# email when all the jobs have finished submitting.
+
+echo $SAMPLE_SHEET has finished submitting at `date` \
+	| mail -s "JOINT CALL SUBMITTED GRCH38" khetric1@jhmi.edu
+

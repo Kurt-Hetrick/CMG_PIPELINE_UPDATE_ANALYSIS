@@ -69,7 +69,7 @@
 
 # decompress the target vcf file into the temporary sub-folder
 
-	zcat $CORE_PATH/$PROJECT_SAMPLE/SNV/RELEASE/FILTERED_ON_TARGET_HG19/$SM_TAG"_MS_OnTarget_SNV.hg19liftover.vcf.gz" \
+	zegrep -v "^chrUn" $CORE_PATH/$PROJECT_SAMPLE/SNV/RELEASE/FILTERED_ON_TARGET_HG19/$SM_TAG"_MS_OnTarget_SNV.hg19liftover.vcf.gz" \
 	>| $CORE_PATH/$PROJECT_SAMPLE/TEMP/$SM_TAG"_MS_CONCORDANCE"/$SM_TAG"_MS_OnTarget_SNV.hg19liftover.vcf"
 
 # look for a final report and store it as a variable. if there are multiple ones, then take the newest one

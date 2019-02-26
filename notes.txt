@@ -185,7 +185,7 @@ FinalResultsSearch-28August2018.REFORMATED.SNV.bed \
 
 2. CHECK THE OLD PIPELINE VCF FOR THE CANDIDATE SNP SITES
 
-> awk '{print "tabix",\
+awk '{print "tabix",\
 "/mnt/research/active/M_Valle_MD_SeqWholeExome_120417_1/MULTI_SAMPLE/M_Valle_20180803_2536samples/M_Valle_20180803_2536samples.BEDsuperset.VQSR.vcf.gz",$1":"$3"-"$3}' \
 FinalResultsSearch-28August2018.REFORMATED.SNV.bed \
 | bash \
@@ -221,3 +221,75 @@ FinalResultsSearch-28August2018.REFORMATED.SNV.bed \
 16      15809105        15809106        G->C    16      15809105        15809106        rs148621523     G->C,A  3670.30 PASS
 
 	# the two missing, no longer emitted variants and the variant that has 3 alleles in the cohort. note there is no spanning deletion this time (gatk did not incorporate this until after version 3.3).
+
+
+########################
+##### to make vcfs #####
+########################
+### for snvs ###
+################
+
+# grab the results
+
+awk '{print "tabix",\                                                                                                                                                                "/mnt/research/active/M_Valle_MD_SeqWholeExome_120417_1/MULTI_SAMPLE/M_Valle_20190205_2665samples.BEDsuperset.VQSR.vcf.gz",$1":"$3"-"$3}' FinalResultsSearch-28August2018.REFORMATED.SNV.bed | bash | cut -f 1-8 | egrep "VariantType=SNP|VariantType=MULTIALLELIC_SNP" > FinalResultsSearch-28August2018.REFORMATED.SNV.results.vcf
+
+# make into a vcf
+
+( tabix -H /mnt/research/active/M_Valle_MD_SeqWholeExome_120417_1/MULTI_SAMPLE/M_Valle_20190205_2665samples.BEDsuperset.VQSR.vcf.gz | grep ^## ; \
+tabix -H /mnt/research/active/M_Valle_MD_SeqWholeExome_120417_1/MULTI_SAMPLE/M_Valle_20190205_2665samples.BEDsuperset.VQSR.vcf.gz | grep -v "^##" | cut -f 1-8 ; \
+awk '$1!="X"' FinalResultsSearch-28August2018.REFORMATED.SNV.results.vcf | sort -k 1,1n -k 2,2n ; \
+awk '$1=="X"' FinalResultsSearch-28August2018.REFORMATED.SNV.results.vcf | sort -k 2,2n ) \
+>| FinalResultsSearch-28August2018.REFORMATED.SNV.vcf
+
+##################
+### for indels ###
+##################
+
+# grab indel results.
+
+awk '{print "tabix",\
+"/mnt/research/active/M_Valle_MD_SeqWholeExome_120417_1/MULTI_SAMPLE/M_Valle_20190205_2665samples.BEDsuperset.VQSR.vcf.gz",$1":"$2"-"$3}' FinalResultsSearch-28August2018.REFORMATED.INDEL.5bpPAD.fixed.bed | bash | cut -f 1-8 | egrep -v "VariantType=SNP|VariantType=MULTIALLELIC_SNP" | sort -k 1,1n -k 2,2n > FinalResultsSearch-28August2018.REFORMATED.INDEL.5bpPAD.fixed.results.vcf
+
+( tabix -H /mnt/research/active/M_Valle_MD_SeqWholeExome_120417_1/MULTI_SAMPLE/M_Valle_20190205_2665samples.BEDsuperset.VQSR.vcf.gz | grep ^## ; \
+tabix -H /mnt/research/active/M_Valle_MD_SeqWholeExome_120417_1/MULTI_SAMPLE/M_Valle_20190205_2665samples.BEDsuperset.VQSR.vcf.gz | grep -v ^## | cut -f 1-8 ; \
+cat FinalResultsSearch-28August2018.REFORMATED.INDEL.5bpPAD.fixed.results.vcf ) \
+| vt decompose -s - \
+| vt normalize -r /mnt/research/tools/PIPELINE_FILES/bwa_mem_0.7.5a_ref/human_g1k_v37_decoy.fasta - \
+>| FinalResultsSearch-28August2018.REFORMATED.INDEL.5bpPAD.fixed.results.DaN.vcf
+
+# manually removed the records in the indel file after decomposing those that were not the correct ones.
+# you read that right.
+
+# combine snps and other into one vcf file
+
+java -jar /mnt/research/tools/LINUX/GATK/GenomeAnalysisTK-3.7/GenomeAnalysisTK.jar \
+-T CombineVariants \
+--disable_auto_index_creation_and_locking_when_reading_rods \
+-R /mnt/research/tools/PIPELINE_FILES/bwa_mem_0.7.5a_ref/human_g1k_v37_decoy.fasta \
+--variant FinalResultsSearch-28August2018.REFORMATED.SNV.vcf \
+--variant FinalResultsSearch-28August2018.REFORMATED.INDEL.5bpPAD.fixed.results.DaN.hand.vcf \
+--genotypemergeoption UNSORTED \
+-o FinalResultsSearch-28August2018.final.vcf
+
+# liftover to build h19 and grch38
+
+java -jar /mnt/linuxtools/PICARD/picard-2.18.25/picard.jar \
+LiftoverVcf \
+I=FinalResultsSearch-28August2018.final.vcf \
+O=FinalResultsSearch-28August2018.final.hg19.vcf \
+REJECT=FinalResultsSearch-28August2018.final.hg19.rejected.vcf \
+R=/mnt/research/tools/PIPELINE_FILES/GATK_resource_bundle/2.8/hg19/ucsc.hg19.fasta \
+CHAIN=/mnt/shared_resources/public_resources/liftOver_chain/chainFiles_b37/b37tohg19.chain
+
+java -jar /mnt/linuxtools/PICARD/picard-2.18.25/picard.jar \
+LiftoverVcf \
+I=FinalResultsSearch-28August2018.final.hg19.vcf \
+O=FinalResultsSearch-28August2018.final.hg38.vcf \
+REJECT=FinalResultsSearch-28August2018.final.hg38.reject.vcf \
+R=/mnt/research/tools/PIPELINE_FILES/GRCh38_aux_files/Homo_sapiens_assembly38.fasta \
+CHAIN=/mnt/shared_resources/public_resources/liftOver_chain/hg19ToHg38.over.chain
+
+# match against cmg genotypes based on exact allele.
+
+# Extract sites in grant vcf, normalize and do exact allele match the phenodb candidate vcf.
+# can do chromosome count comparisons as well.

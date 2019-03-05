@@ -445,9 +445,9 @@ awk 'BEGIN {OFS="\t"} NR>1 {print $0,$23}' M_Valle_MD_SeqWholeExome_120417_1_GRC
 cut -d "," -f 3,5 MasterSampleKey_090418_11433_all.csv \
 | sed 's/,/\t/g' \
 | awk 'NR>1' \
-| awk '{print "awk","\x27","$1==\x22" $1 "\x22" , "\x27" , "M_Valle_MD_SeqWholeExome_120417_1_GRCh38-2662.BEDsuperset.VQSR.phenodb.final.ann.explode.txt"}' \
+| awk '{print "awk","\x27","$1==\x22" $1 "\x22" , "{print \x22" $2 "\x22,$0}\x27", "M_Valle_MD_SeqWholeExome_120417_1_GRCh38-2662.BEDsuperset.VQSR.phenodb.final.ann.explode.txt"}' \
 | bash \
-| awk 'BEGIN {OFS="\t"} {split($1,LOCAL_ID,"[@-]"); print LOCAL_ID[1],$0}' \
+| awk 'BEGIN {OFS="\t"} {split($1,LOCAL_ID,"_"); print LOCAL_ID[1],$0}' \
 | sed 's/ /\t/g' \
 | sort -k 4,4 -k 5,5n -k 1,1 \
 | datamash \

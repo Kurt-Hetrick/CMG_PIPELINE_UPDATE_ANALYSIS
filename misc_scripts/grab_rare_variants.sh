@@ -141,7 +141,7 @@
 	cut -d "," -f 3,5 $MASTER_KEY \
 		| sed 's/,/\t/g' \
 		| awk 'NR>1' \
-		| awk '{print "awk","\x27","$1==\x22" $1 "\x22" , "{print \x22" $2 "\x22,$0}\x27","'$OUT_DIR'" "/" "'$VCF_PREFIX'" ".RARE.SNP.SORTED.EXPLODED.txt"}' \
+		| awk '{print "awk","\x27","$1==\x22" $1 "\x22" , "{print \x22" $2 "\x22,$0}\x27", "'$OUT_DIR'" "/" "'$VCF_PREFIX'" ".RARE.SNP.SORTED.EXPLODED.txt"}' \
 		| bash \
 		| awk 'BEGIN {OFS="\t"} {split($1,LOCAL_ID,"_"); print LOCAL_ID[1],$0}' \
 		| sed 's/ /\t/g' \

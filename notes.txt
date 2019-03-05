@@ -231,15 +231,61 @@ FinalResultsSearch-28August2018.REFORMATED.SNV.bed \
 
 # grab the results
 
-awk '{print "tabix",\                                                                                                                                                                "/mnt/research/active/M_Valle_MD_SeqWholeExome_120417_1/MULTI_SAMPLE/M_Valle_20190205_2665samples.BEDsuperset.VQSR.vcf.gz",$1":"$3"-"$3}' FinalResultsSearch-28August2018.REFORMATED.SNV.bed | bash | cut -f 1-8 | egrep "VariantType=SNP|VariantType=MULTIALLELIC_SNP" > FinalResultsSearch-28August2018.REFORMATED.SNV.results.vcf
+awk '{print "tabix",\
+"/mnt/research/active/M_Valle_MD_SeqWholeExome_120417_1/MULTI_SAMPLE/M_Valle_20190205_2665samples.BEDsuperset.VQSR.vcf.gz",$1":"$3"-"$3}' FinalResultsSearch-28August2018.REFORMATED.SNV.bed \
+| bash \
+| egrep "VariantType=SNP|VariantType=MULTIALLELIC_SNP" \
+>| FinalResultsSearch-28August2018.REFORMATED.SNV.results.vcf
 
-# make into a vcf
+# make into vcf, sort by ref, decompose and normalize
 
-( tabix -H /mnt/research/active/M_Valle_MD_SeqWholeExome_120417_1/MULTI_SAMPLE/M_Valle_20190205_2665samples.BEDsuperset.VQSR.vcf.gz | grep ^## ; \
-tabix -H /mnt/research/active/M_Valle_MD_SeqWholeExome_120417_1/MULTI_SAMPLE/M_Valle_20190205_2665samples.BEDsuperset.VQSR.vcf.gz | grep -v "^##" | cut -f 1-8 ; \
+( tabix -H /mnt/research/active/M_Valle_MD_SeqWholeExome_120417_1/MULTI_SAMPLE/M_Valle_20190205_2665samples.BEDsuperset.VQSR.vcf.gz ; \
 awk '$1!="X"' FinalResultsSearch-28August2018.REFORMATED.SNV.results.vcf | sort -k 1,1n -k 2,2n ; \
 awk '$1=="X"' FinalResultsSearch-28August2018.REFORMATED.SNV.results.vcf | sort -k 2,2n ) \
+| vt decompose -s - \
+| vt normalize -r /mnt/research/tools/PIPELINE_FILES/bwa_mem_0.7.5a_ref/human_g1k_v37_decoy.fasta - \
 >| FinalResultsSearch-28August2018.REFORMATED.SNV.vcf
+
+# remove star alleles.
+
+( grep ^# FinalResultsSearch-28August2018.REFORMATED.SNV.vcf ; \
+grep -v ^# FinalResultsSearch-28August2018.REFORMATED.SNV.vcf \
+| awk '$5!="*"' ) \
+>| FinalResultsSearch-28August2018.REFORMATED.SNV.NoStar.vcf
+
+# remove the wrong allele from a snp from a decomposed multi-allelic.
+
+grep -v ^# FinalResultsSearch-28August2018.REFORMATED.SNV.NoStar.vcf \
+| awk '$1=="16"&&$2=="15809106"&&$5=="A" {print NR}'
+
+133
+
+( grep ^# FinalResultsSearch-28August2018.REFORMATED.SNV.NoStar.vcf \
+; grep -v ^# FinalResultsSearch-28August2018.REFORMATED.SNV.NoStar.vcf \
+| awk 'NR!=133' ) \
+>| FinalResultsSearch-28August2018.REFORMATED.SNV.clean.vcf
+
+# reannotate sample ids
+
+/mnt/linuxtools/JAVA/jdk1.8.0_73/bin/java -jar \
+/mnt/linuxtools/GATK/GenomeAnalysisTK-3.7/GenomeAnalysisTK.jar \
+-T VariantAnnotator \
+-R /mnt/research/tools/PIPELINE_FILES/bwa_mem_0.7.5a_ref/human_g1k_v37_decoy.fasta \
+--variant FinalResultsSearch-28August2018.REFORMATED.SNV.clean.vcf \
+-L FinalResultsSearch-28August2018.REFORMATED.SNV.clean.vcf \
+-A GenotypeSummaries \
+-A VariantType \
+-A SampleList \
+-o FinalResultsSearch-28August2018.REFORMATED.SNV.clean.ann.vcf
+
+# make it sites only
+
+( grep ^## FinalResultsSearch-28August2018.REFORMATED.SNV.clean.ann.vcf \
+; grep ^#C FinalResultsSearch-28August2018.REFORMATED.SNV.clean.ann.vcf \
+| cut -f 1-8 \
+; grep -v ^# FinalResultsSearch-28August2018.REFORMATED.SNV.clean.ann.vcf \
+| cut -f 1-8 ) \
+> FinalResultsSearch-28August2018.REFORMATED.SNV.clean.ann.sites.vcf
 
 ##################
 ### for indels ###
@@ -266,7 +312,7 @@ java -jar /mnt/research/tools/LINUX/GATK/GenomeAnalysisTK-3.7/GenomeAnalysisTK.j
 -T CombineVariants \
 --disable_auto_index_creation_and_locking_when_reading_rods \
 -R /mnt/research/tools/PIPELINE_FILES/bwa_mem_0.7.5a_ref/human_g1k_v37_decoy.fasta \
---variant FinalResultsSearch-28August2018.REFORMATED.SNV.vcf \
+--variant FinalResultsSearch-28August2018.REFORMATED.SNV.clean.ann.sites.vcf \
 --variant FinalResultsSearch-28August2018.REFORMATED.INDEL.5bpPAD.fixed.results.DaN.hand.vcf \
 --genotypemergeoption UNSORTED \
 -o FinalResultsSearch-28August2018.final.vcf
@@ -291,5 +337,161 @@ CHAIN=/mnt/shared_resources/public_resources/liftOver_chain/hg19ToHg38.over.chai
 
 # match against cmg genotypes based on exact allele.
 
-# Extract sites in grant vcf, normalize and do exact allele match the phenodb candidate vcf.
-# can do chromosome count comparisons as well.
+	# do a rough pull
+	
+java -jar /mnt/linuxtools/GATK/GenomeAnalysisTK-3.7/GenomeAnalysisTK.jar \
+-T SelectVariants \
+--disable_auto_index_creation_and_locking_when_reading_rods \
+-R /mnt/research/tools/PIPELINE_FILES/GRCh38_aux_files/Homo_sapiens_assembly38.fasta \
+--variant /mnt/research/active/M_Valle_MD_SeqWholeExome_120417_1_GRCh38/MULTI_SAMPLE/M_Valle_MD_SeqWholeExome_120417_1_GRCh38-2662.BEDsuperset.VQSR.vcf.gz \
+-o M_Valle_MD_SeqWholeExome_120417_1_GRCh38-2662.BEDsuperset.VQSR.phenodb.raw.vcf.gz \
+-ip 20 \
+-L FinalResultsSearch-28August2018.final.hg38.vcf
+
+	# decompose multi-alleles.
+	
+	vt decompose \
+	-s \
+	M_Valle_MD_SeqWholeExome_120417_1_GRCh38-2662.BEDsuperset.VQSR.phenodb.raw.vcf.gz \
+	| vt normalize \
+	-r /mnt/research/tools/PIPELINE_FILES/GRCh38_aux_files/Homo_sapiens_assembly38.fasta - \
+	>| M_Valle_MD_SeqWholeExome_120417_1_GRCh38-2662.BEDsuperset.VQSR.phenodb.DaN.vcf
+
+	# bgzip/tabix vcf
+	
+	bgzip M_Valle_MD_SeqWholeExome_120417_1_GRCh38-2662.BEDsuperset.VQSR.phenodb.DaN.vcf
+	tabix -p vcf M_Valle_MD_SeqWholeExome_120417_1_GRCh38-2662.BEDsuperset.VQSR.phenodb.DaN.vcf.gz
+
+	bgzip -c FinalResultsSearch-28August2018.final.hg38.vcf >| FinalResultsSearch-28August2018.final.hg38.vcf.gz
+	tabix -p vcf FinalResultsSearch-28August2018.final.hg38.vcf.gz
+
+	# Do exact allele matching.
+	
+bcftools isec -n=2 -w 1 \
+--output M_Valle_MD_SeqWholeExome_120417_1_GRCh38-2662.BEDsuperset.VQSR.phenodb.final.vcf \
+--output-type v \
+M_Valle_MD_SeqWholeExome_120417_1_GRCh38-2662.BEDsuperset.VQSR.phenodb.DaN.vcf.gz \
+FinalResultsSearch-28August2018.final.hg38.vcf.gz
+
+# reannotate final with sample ids
+
+/mnt/linuxtools/JAVA/jdk1.8.0_73/bin/java -jar \
+/mnt/linuxtools/GATK/GenomeAnalysisTK-3.7/GenomeAnalysisTK.jar \
+-T VariantAnnotator \
+-R /mnt/research/tools/PIPELINE_FILES/GRCh38_aux_files/Homo_sapiens_assembly38.fasta \
+--variant M_Valle_MD_SeqWholeExome_120417_1_GRCh38-2662.BEDsuperset.VQSR.phenodb.final.vcf \
+-L M_Valle_MD_SeqWholeExome_120417_1_GRCh38-2662.BEDsuperset.VQSR.phenodb.final.vcf \
+-A GenotypeSummaries \
+-A VariantType \
+-A SampleList \
+-o M_Valle_MD_SeqWholeExome_120417_1_GRCh38-2662.BEDsuperset.VQSR.phenodb.final.ann.vcf
+
+# turn into a table
+
+/mnt/linuxtools/JAVA/jdk1.8.0_73/bin/java -jar \
+/mnt/linuxtools/GATK/GenomeAnalysisTK-3.7/GenomeAnalysisTK.jar \
+-T VariantsToTable \
+--disable_auto_index_creation_and_locking_when_reading_rods \
+-R /mnt/research/tools/PIPELINE_FILES/GRCh38_aux_files/Homo_sapiens_assembly38.fasta \
+--variant M_Valle_MD_SeqWholeExome_120417_1_GRCh38-2662.BEDsuperset.VQSR.phenodb.final.ann.vcf \
+-F CHROM \
+-F POS \
+-F ID \
+-F REF \
+-F ALT \
+-F QUAL \
+-F TYPE \
+-F MULTI-ALLELIC \
+-F EVENTLENGTH \
+-F FILTER \
+-F AC \
+-F AN \
+-F AF \
+-F ABHet \
+-F ABHom \
+-F HET \
+-F HOM-VAR \
+-F NSAMPLES \
+-F NO-CALL \
+-F GQ_MEAN \
+-F GQ_STDDEV \
+-F NDA \
+-F Samples \
+-F DP \
+-F QD \
+-F GC \
+-F FS \
+-F SOR \
+-F MQ \
+-F MQRankSum \
+-F ReadPosRankSum \
+-F culprit \
+-F VQSLOD \
+-F POSITIVE_TRAIN_SITE \
+-F NEGATIVE_TRAIN_SITE \
+-AMD \
+-raw \
+-o M_Valle_MD_SeqWholeExome_120417_1_GRCh38-2662.BEDsuperset.VQSR.phenodb.final.ann.txt
+	
+# explode table into a record per sample/loci...this is for matching on the sm tag to local id
+
+awk 'BEGIN {OFS="\t"} NR>1 {print $0,$23}' M_Valle_MD_SeqWholeExome_120417_1_GRCh38-2662.BEDsuperset.VQSR.phenodb.final.ann.txt \
+	| awk 'BEGIN {OFS="\t"} {split($36,sample,","); for (i in sample) {print sample[i],$0}}' \
+	| cut -f 1-36 \
+>| M_Valle_MD_SeqWholeExome_120417_1_GRCh38-2662.BEDsuperset.VQSR.phenodb.final.ann.explode.txt
+
+# match the master key against exploded table to get local id
+
+cut -d "," -f 3,5 MasterSampleKey_090418_11433_all.csv \
+| sed 's/,/\t/g' \
+| awk 'NR>1' \
+| awk '{print "awk","\x27","$1==\x22" $1 "\x22" , "\x27" , "M_Valle_MD_SeqWholeExome_120417_1_GRCh38-2662.BEDsuperset.VQSR.phenodb.final.ann.explode.txt"}' \
+| bash \
+| awk 'BEGIN {OFS="\t"} {split($1,LOCAL_ID,"[@-]"); print LOCAL_ID[1],$0}' \
+| sed 's/ /\t/g' \
+| sort -k 4,4 -k 5,5n -k 1,1 \
+| datamash \
+-g 4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,27,28,29,30,31,32,33,34,35,36,37,38 \
+unique 1 \
+collapse 2 \
+collapse 3 \
+| awk 'BEGIN {print "CHROM", \
+"POS" , \
+"ID", \
+"REF", \
+"ALT", \
+"QUAL", \
+"TYPE", \
+"MULTI-ALLELIC", \
+"EVENTLENGTH", \
+"FILTER", \
+"AC", \
+"AN", \
+"AF", \
+"ABHet", \
+"ABHom", \
+"HET", \
+"HOM-VAR", \
+"NSAMPLES", \
+"NO-CALL", \
+"GQ_MEAN", \
+"GQ_STDDEV", \
+"NDA", \
+"DP", \
+"QD", \
+"GC", \
+"FS", \
+"SOR", \
+"MQ", \
+"MQRankSum", \
+"ReadPosRankSum", \
+"culprit", \
+"VQSLOD", \
+"POSITIVE_TRAIN_SITE", \
+"NEGATIVE_TRAIN_SITE", \
+"FAMILIES", \
+"LOCAL_IDS", \
+"SM_TAGS"} \
+{print $0}' \
+| sed 's/ /\t/g' \
+>| M_Valle_MD_SeqWholeExome_120417_1_GRCh38-2662.BEDsuperset.VQSR.phenodb.grch38.LOCAL_ID.COLLAPSED.txt

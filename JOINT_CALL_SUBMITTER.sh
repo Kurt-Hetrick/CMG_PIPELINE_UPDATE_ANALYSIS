@@ -42,7 +42,7 @@
 
 	# EVENTUALLY I WANT THIS SET UP AS AN OPTION WITH A DEFAULT OF X
 
-	PRIORITY="-20"
+	PRIORITY="-750"
 
 	# eventually, i want to push this out to something...maybe in the vcf file header.
 	PIPELINE_VERSION=`git --git-dir=$SCRIPT_DIR/../.git --work-tree=$SCRIPT_DIR/.. log --pretty=format:'%h' -n 1`
@@ -238,7 +238,7 @@
 			 | uniq \
 			 | awk 'BEGIN{OFS="/"}{print "ls " "'$CORE_PATH'",$1,"GVCF",$2".g.vcf*"}' \
 			 | bash \
-			 | egrep -v "idx|tbi" \
+			 | egrep -v "idx|tbi|md5" \
 			>| $CORE_PATH'/'$PROJECT_MS'/'$TOTAL_SAMPLES'.samples.gvcf.list'
 
 			# STORE THE GVCF LIST FILE PATH AS A VARIABLE

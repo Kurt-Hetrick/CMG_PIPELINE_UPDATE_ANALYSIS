@@ -23,7 +23,7 @@
 	module load gcc/7.2.0
 
 	# CHANGE SCRIPT DIR TO WHERE YOU HAVE HAVE THE SCRIPTS BEING SUBMITTED
-	SCRIPT_DIR="/mnt/research/tools/LINUX/00_GIT_REPO_KURT/CMG_PIPELINE_UPDATE_ANALYSIS/scripts/"
+	SCRIPT_DIR="/mnt/research/tools/LINUX/00_GIT_REPO_KURT/01_ARCHIVE/CMG_PIPELINE_UPDATE_ANALYSIS/scripts/"
 
 	# Directory where sequencing projects are located
 	CORE_PATH="/mnt/research/active"

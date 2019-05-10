@@ -20,7 +20,7 @@
 ###########################
 
 	# gcc is so that it can be pushed out to the compute nodes via qsub (-V)
-	module load gcc/5.1.0
+	module load gcc/7.2.0
 
 	# CHANGE SCRIPT DIR TO WHERE YOU HAVE HAVE THE SCRIPTS BEING SUBMITTED
 	SCRIPT_DIR="/mnt/research/tools/LINUX/00_GIT_REPO_KURT/CMG_PIPELINE_UPDATE_ANALYSIS/scripts/"
@@ -34,7 +34,7 @@
 	 | cut -d @ -f 1 \
 	 | sort \
 	 | uniq \
-	 | egrep -v "bigmem.q|all.q|cgc.q|programmers.q|rhel7.q|qtest.q" \
+	 | egrep -v "all.q|cgc.q|programmers.q|rhel7.q|bigmem.q|bina.q|qtest.q|c6420.q" \
 	 | datamash collapse 1 \
 	 | awk '{print $1}'`
 
@@ -73,7 +73,7 @@
 		# 14 June 2018
 	CIDRSEQSUITE_7_5_0_DIR="/mnt/research/tools/LINUX/CIDRSEQSUITE/7.5.0"
 		# Copied from \\isilon-cifs\sequencing\CIDRSeqSuiteSoftware\RELEASES\7.0.0\QC_REPORT\EnhancedSequencingQCReport.jar
-	LAB_QC_DIR="/mnt/linuxtools/CUSTOM_CIDR/EnhancedSequencingQCReport/0.0.2"
+	LAB_QC_DIR="/mnt/linuxtools/CUSTOM_CIDR/EnhancedSequencingQCReport/0.0.7"
 	SAMTOOLS_DIR="/isilon/sequencing/Kurt/Programs/PYTHON/Anaconda2-5.0.0.1/bin/"
 		# This is samtools version 1.5
 		# I have no idea why other users other than me cannot index a cram file with a version of samtools that I built from the source
@@ -943,532 +943,548 @@ done
 	SELECT_INDEL_ALL_PASS
 	echo sleep 0.1s
 
-# #######################################################################
-# #######################################################################
-# ################### Start of Sample Breakouts #########################
-# #######################################################################
-# #######################################################################
+
+#########################################################################
+
+# # #######################################################################
+# # #######################################################################
+# # ################### Start of Sample Breakouts #########################
+# # #######################################################################
+# # #######################################################################
 
 
-	# for each unique sample id in the sample sheet grab the bed files, ref genome, project and store as an array
+# 	# for each unique sample id in the sample sheet grab the bed files, ref genome, project and store as an array
 
-		CREATE_SAMPLE_INFO_ARRAY ()
-		{
-			SAMPLE_INFO_ARRAY=(`sed 's/\r//g' $SAMPLE_SHEET \
-				| awk 'BEGIN{FS=","} NR>1 {print $1,$8,$17,$15,$18,$12}' \
-				| sed 's/,/\t/g' \
-				| sort -k 8,8 \
-				| uniq \
-				| awk '$2=="'$SAMPLE'" {print $1,$2,$3,$4,$5,$6}'`)
+# 		CREATE_SAMPLE_INFO_ARRAY ()
+# 		{
+# 			SAMPLE_INFO_ARRAY=(`sed 's/\r//g' $SAMPLE_SHEET \
+# 				| awk 'BEGIN{FS=","} NR>1 {print $1,$8,$17,$15,$18,$12}' \
+# 				| sed 's/,/\t/g' \
+# 				| sort -k 8,8 \
+# 				| uniq \
+# 				| awk '$2=="'$SAMPLE'" {print $1,$2,$3,$4,$5,$6}'`)
 
-			PROJECT_SAMPLE=${SAMPLE_INFO_ARRAY[0]}
-			SM_TAG=${SAMPLE_INFO_ARRAY[1]}
-			TARGET_BED=${SAMPLE_INFO_ARRAY[2]}
-			TITV_BED=${SAMPLE_INFO_ARRAY[3]}
-			DBSNP=${SAMPLE_INFO_ARRAY[4]} #Not used unless we implement HC_BAM
-			SAMPLE_REF_GENOME=${SAMPLE_INFO_ARRAY[5]}
+# 			PROJECT_SAMPLE=${SAMPLE_INFO_ARRAY[0]}
+# 			SM_TAG=${SAMPLE_INFO_ARRAY[1]}
+# 			TARGET_BED=${SAMPLE_INFO_ARRAY[2]}
+# 			TITV_BED=${SAMPLE_INFO_ARRAY[3]}
+# 			DBSNP=${SAMPLE_INFO_ARRAY[4]} #Not used unless we implement HC_BAM
+# 			SAMPLE_REF_GENOME=${SAMPLE_INFO_ARRAY[5]}
 
-			UNIQUE_ID_SM_TAG=$(echo $SM_TAG | sed 's/@/_/g') # If there is an @ in the qsub or holdId name it breaks
-			BARCODE_2D=$(echo $SM_TAG | awk '{split($1,SM_TAG,/[@-]/); print SM_TAG[2]}') # SM_TAG = RIS_ID[@-]BARCODE_2D
-		}
+# 			UNIQUE_ID_SM_TAG=$(echo $SM_TAG | sed 's/@/_/g') # If there is an @ in the qsub or holdId name it breaks
+# 			BARCODE_2D=$(echo $SM_TAG | awk '{split($1,SM_TAG,/[@-]/); print SM_TAG[2]}') # SM_TAG = RIS_ID[@-]BARCODE_2D
+# 		}
 
-	# for each sample make a bunch directories if not already present in the samples defined project directory
+# 	# for each sample make a bunch directories if not already present in the samples defined project directory
 
-		MAKE_PROJ_DIR_TREE ()
-		{
-			mkdir -p \
-			$CORE_PATH/$PROJECT_SAMPLE/{TEMP,LOGS,COMMAND_LINES} \
-			$CORE_PATH/$PROJECT_SAMPLE/INDEL/RELEASE/{FILTERED_ON_BAIT,FILTERED_ON_TARGET} \
-			$CORE_PATH/$PROJECT_SAMPLE/SNV/RELEASE/{FILTERED_ON_BAIT,FILTERED_ON_TARGET} \
-			$CORE_PATH/$PROJECT_SAMPLE/MIXED/RELEASE/{FILTERED_ON_BAIT,FILTERED_ON_TARGET} \
-			$CORE_PATH/$PROJECT_SAMPLE/VCF/RELEASE/{FILTERED_ON_BAIT,FILTERED_ON_TARGET} \
-			$CORE_PATH/$PROJECT_SAMPLE/REPORTS/{TI_TV_MS,CONCORDANCE_MS} \
-			$CORE_PATH/$PROJECT_SAMPLE/TEMP/{$SM_TAG"_MS_CONCORDANCE",$SM_TAG"_SCATTER"} \
-			$CORE_PATH/$PROJECT_MS/LOGS/$SM_TAG
-		}
+# 		MAKE_PROJ_DIR_TREE ()
+# 		{
+# 			mkdir -p \
+# 			$CORE_PATH/$PROJECT_SAMPLE/{TEMP,LOGS,COMMAND_LINES} \
+# 			$CORE_PATH/$PROJECT_SAMPLE/INDEL/RELEASE/{FILTERED_ON_BAIT,FILTERED_ON_TARGET} \
+# 			$CORE_PATH/$PROJECT_SAMPLE/SNV/RELEASE/{FILTERED_ON_BAIT,FILTERED_ON_TARGET} \
+# 			$CORE_PATH/$PROJECT_SAMPLE/MIXED/RELEASE/{FILTERED_ON_BAIT,FILTERED_ON_TARGET} \
+# 			$CORE_PATH/$PROJECT_SAMPLE/VCF/RELEASE/{FILTERED_ON_BAIT,FILTERED_ON_TARGET} \
+# 			$CORE_PATH/$PROJECT_SAMPLE/REPORTS/{TI_TV_MS,CONCORDANCE_MS} \
+# 			$CORE_PATH/$PROJECT_SAMPLE/TEMP/{$SM_TAG"_MS_CONCORDANCE",$SM_TAG"_SCATTER"} \
+# 			$CORE_PATH/$PROJECT_MS/LOGS/$SM_TAG
+# 		}
 
-		SELECT_PASSING_VARIANTS_PER_SAMPLE ()
-		{
-			echo \
-			qsub \
-				-S /bin/bash \
-				-cwd \
-				-V \
-				-q $QUEUE_LIST \
-				-p $PRIORITY \
-				-j y \
-			-N J02_SELECT_VARIANTS_FOR_SAMPLE_$UNIQUE_ID_SM_TAG \
-				-o $CORE_PATH/$PROJECT_MS/LOGS/$SM_TAG/J02_SELECT_VARIANTS_FOR_SAMPLE_$SM_TAG".log" \
-			-hold_jid I01_COMBINE_VARIANTS_VCF_$PROJECT_MS \
-			$SCRIPT_DIR/J02_SELECT_VARIANTS_FOR_SAMPLE.sh \
-				$JAVA_1_8 \
-				$GATK_DIR \
-				$SAMPLE_REF_GENOME \
-				$CORE_PATH \
-				$PROJECT_SAMPLE \
-				$PROJECT_MS \
-				$SM_TAG \
-				$PREFIX
-		}
+# 		SELECT_PASSING_VARIANTS_PER_SAMPLE ()
+# 		{
+# 			echo \
+# 			qsub \
+# 				-S /bin/bash \
+# 				-cwd \
+# 				-V \
+# 				-q $QUEUE_LIST \
+# 				-p $PRIORITY \
+# 				-j y \
+# 			-N J02_SELECT_VARIANTS_FOR_SAMPLE_$UNIQUE_ID_SM_TAG \
+# 				-o $CORE_PATH/$PROJECT_MS/LOGS/$SM_TAG/J02_SELECT_VARIANTS_FOR_SAMPLE_$SM_TAG".log" \
+# 			-hold_jid I01_COMBINE_VARIANTS_VCF_$PROJECT_MS \
+# 			$SCRIPT_DIR/J02_SELECT_VARIANTS_FOR_SAMPLE.sh \
+# 				$JAVA_1_8 \
+# 				$GATK_DIR \
+# 				$SAMPLE_REF_GENOME \
+# 				$CORE_PATH \
+# 				$PROJECT_SAMPLE \
+# 				$PROJECT_MS \
+# 				$SM_TAG \
+# 				$PREFIX
+# 		}
 
 
-		PASSING_VARIANTS_ON_TARGET_BY_SAMPLE ()
-		{
-			echo \
-			qsub \
-				-S /bin/bash \
-				-cwd \
-				-V \
-				-q $QUEUE_LIST \
-				-p $PRIORITY \
-				-j y \
-			-N J02A01_PASSING_VARIANTS_ON_TARGET_BY_SAMPLE_$UNIQUE_ID_SM_TAG \
-				-o $CORE_PATH/$PROJECT_MS/LOGS/$SM_TAG/J02A01_PASSING_VARIANTS_ON_TARGET_BY_SAMPLE_$SAMPLE.log \
-			-hold_jid J02_SELECT_VARIANTS_FOR_SAMPLE_$UNIQUE_ID_SM_TAG \
-			$SCRIPT_DIR/J02A01_PASSING_VARIANTS_ON_TARGET_BY_SAMPLE.sh \
-				$JAVA_1_8 \
-				$GATK_DIR \
-				$SAMPLE_REF_GENOME \
-				$CORE_PATH \
-				$PROJECT_SAMPLE \
-				$SM_TAG \
-				$TARGET_BED
-		}
+# 		PASSING_VARIANTS_ON_TARGET_BY_SAMPLE ()
+# 		{
+# 			echo \
+# 			qsub \
+# 				-S /bin/bash \
+# 				-cwd \
+# 				-V \
+# 				-q $QUEUE_LIST \
+# 				-p $PRIORITY \
+# 				-j y \
+# 			-N J02A01_PASSING_VARIANTS_ON_TARGET_BY_SAMPLE_$UNIQUE_ID_SM_TAG \
+# 				-o $CORE_PATH/$PROJECT_MS/LOGS/$SM_TAG/J02A01_PASSING_VARIANTS_ON_TARGET_BY_SAMPLE_$SAMPLE.log \
+# 			-hold_jid J02_SELECT_VARIANTS_FOR_SAMPLE_$UNIQUE_ID_SM_TAG \
+# 			$SCRIPT_DIR/J02A01_PASSING_VARIANTS_ON_TARGET_BY_SAMPLE.sh \
+# 				$JAVA_1_8 \
+# 				$GATK_DIR \
+# 				$SAMPLE_REF_GENOME \
+# 				$CORE_PATH \
+# 				$PROJECT_SAMPLE \
+# 				$SM_TAG \
+# 				$TARGET_BED
+# 		}
 
-			PASSING_SNVS_ON_BAIT_BY_SAMPLE ()
-			{
-				echo \
-				qsub \
-					-S /bin/bash \
-					-cwd \
-					-V \
-					-q $QUEUE_LIST \
-					-p $PRIORITY \
-					-j y \
-				-N J02A02_PASSING_SNVS_ON_BAIT_BY_SAMPLE_$UNIQUE_ID_SM_TAG \
-					-o $CORE_PATH/$PROJECT_MS/LOGS/$SM_TAG/J02A02_PASSING_SNVS_ON_BAIT_BY_SAMPLE_$SAMPLE.log \
-				-hold_jid J02_SELECT_VARIANTS_FOR_SAMPLE_$UNIQUE_ID_SM_TAG \
-				$SCRIPT_DIR/J02A02_PASSING_SNVS_ON_BAIT_BY_SAMPLE.sh \
-					$JAVA_1_8 \
-					$GATK_DIR \
-					$SAMPLE_REF_GENOME \
-					$CORE_PATH \
-					$PROJECT_SAMPLE \
-					$SM_TAG
-			}
+# 			PASSING_SNVS_ON_BAIT_BY_SAMPLE ()
+# 			{
+# 				echo \
+# 				qsub \
+# 					-S /bin/bash \
+# 					-cwd \
+# 					-V \
+# 					-q $QUEUE_LIST \
+# 					-p $PRIORITY \
+# 					-j y \
+# 				-N J02A02_PASSING_SNVS_ON_BAIT_BY_SAMPLE_$UNIQUE_ID_SM_TAG \
+# 					-o $CORE_PATH/$PROJECT_MS/LOGS/$SM_TAG/J02A02_PASSING_SNVS_ON_BAIT_BY_SAMPLE_$SAMPLE.log \
+# 				-hold_jid J02_SELECT_VARIANTS_FOR_SAMPLE_$UNIQUE_ID_SM_TAG \
+# 				$SCRIPT_DIR/J02A02_PASSING_SNVS_ON_BAIT_BY_SAMPLE.sh \
+# 					$JAVA_1_8 \
+# 					$GATK_DIR \
+# 					$SAMPLE_REF_GENOME \
+# 					$CORE_PATH \
+# 					$PROJECT_SAMPLE \
+# 					$SM_TAG
+# 			}
 
-		# for each sample, make a vcf containing only passing snvs that fall within the on target bed file
+# 		# for each sample, make a vcf containing only passing snvs that fall within the on target bed file
 
-			PASSING_SNVS_ON_TARGET_BY_SAMPLE ()
-			{
-				echo \
-				qsub \
-					-S /bin/bash \
-					-cwd \
-					-V \
-					-q $QUEUE_LIST \
-					-p $PRIORITY \
-					-j y \
-				-N J02A03_PASSING_SNVS_ON_TARGET_BY_SAMPLE_$UNIQUE_ID_SM_TAG \
-					-o $CORE_PATH/$PROJECT_MS/LOGS/$SM_TAG/J02A03_PASSING_SNVS_ON_TARGET_BY_SAMPLE_$SAMPLE.log \
-				-hold_jid J02_SELECT_VARIANTS_FOR_SAMPLE_$UNIQUE_ID_SM_TAG \
-				$SCRIPT_DIR/J02A03_PASSING_SNVS_ON_TARGET_BY_SAMPLE.sh \
-					$JAVA_1_8 \
-					$GATK_DIR \
-					$SAMPLE_REF_GENOME \
-					$CORE_PATH \
-					$PROJECT_SAMPLE \
-					$SM_TAG \
-					$TARGET_BED
-			}
+# 			PASSING_SNVS_ON_TARGET_BY_SAMPLE ()
+# 			{
+# 				echo \
+# 				qsub \
+# 					-S /bin/bash \
+# 					-cwd \
+# 					-V \
+# 					-q $QUEUE_LIST \
+# 					-p $PRIORITY \
+# 					-j y \
+# 				-N J02A03_PASSING_SNVS_ON_TARGET_BY_SAMPLE_$UNIQUE_ID_SM_TAG \
+# 					-o $CORE_PATH/$PROJECT_MS/LOGS/$SM_TAG/J02A03_PASSING_SNVS_ON_TARGET_BY_SAMPLE_$SAMPLE.log \
+# 				-hold_jid J02_SELECT_VARIANTS_FOR_SAMPLE_$UNIQUE_ID_SM_TAG \
+# 				$SCRIPT_DIR/J02A03_PASSING_SNVS_ON_TARGET_BY_SAMPLE.sh \
+# 					$JAVA_1_8 \
+# 					$GATK_DIR \
+# 					$SAMPLE_REF_GENOME \
+# 					$CORE_PATH \
+# 					$PROJECT_SAMPLE \
+# 					$SM_TAG \
+# 					$TARGET_BED
+# 			}
 
-			# for each sample use the passing on target snvs to calculate concordance and het sensitivity to array genotypes.
-			# reconfigure using the new concordance tool.
-				CONCORDANCE_ON_TARGET_PER_SAMPLE ()
-				{
-					echo \
-					qsub \
-						-S /bin/bash \
-						-cwd \
-						-V \
-						-q $QUEUE_LIST \
-						-p $PRIORITY \
-						-j y \
-					-N J02A03-1_CONCORDANCE_ON_TARGET_PER_SAMPLE_$UNIQUE_ID_SM_TAG \
-						-o $CORE_PATH/$PROJECT_MS/LOGS/$SM_TAG/J02A03-1_CONCORDANCE_ON_TARGET_PER_SAMPLE_$SAMPLE.log \
-					-hold_jid J02A03_PASSING_SNVS_ON_TARGET_BY_SAMPLE_$UNIQUE_ID_SM_TAG \
-					$SCRIPT_DIR/J02A03-1_CONCORDANCE_ON_TARGET_PER_SAMPLE.sh \
-						$JAVA_1_8 \
-						$CIDRSEQSUITE_7_5_0_DIR \
-						$VERACODE_CSV \
-						$CORE_PATH \
-						$PROJECT_SAMPLE \
-						$SM_TAG \
-						$TARGET_BED
-				}
+# 			# for each sample use the passing on target snvs to calculate concordance and het sensitivity to array genotypes.
+# 			# reconfigure using the new concordance tool.
+# 				CONCORDANCE_ON_TARGET_PER_SAMPLE ()
+# 				{
+# 					echo \
+# 					qsub \
+# 						-S /bin/bash \
+# 						-cwd \
+# 						-V \
+# 						-q $QUEUE_LIST \
+# 						-p $PRIORITY \
+# 						-j y \
+# 					-N J02A03-1_CONCORDANCE_ON_TARGET_PER_SAMPLE_$UNIQUE_ID_SM_TAG \
+# 						-o $CORE_PATH/$PROJECT_MS/LOGS/$SM_TAG/J02A03-1_CONCORDANCE_ON_TARGET_PER_SAMPLE_$SAMPLE.log \
+# 					-hold_jid J02A03_PASSING_SNVS_ON_TARGET_BY_SAMPLE_$UNIQUE_ID_SM_TAG \
+# 					$SCRIPT_DIR/J02A03-1_CONCORDANCE_ON_TARGET_PER_SAMPLE.sh \
+# 						$JAVA_1_8 \
+# 						$CIDRSEQSUITE_7_5_0_DIR \
+# 						$VERACODE_CSV \
+# 						$CORE_PATH \
+# 						$PROJECT_SAMPLE \
+# 						$SM_TAG \
+# 						$TARGET_BED
+# 				}
 
-	##########################################################################
-	### grabbing per sample indel only vcf files for on bait and on target ###
-	##########################################################################
+# 	##########################################################################
+# 	### grabbing per sample indel only vcf files for on bait and on target ###
+# 	##########################################################################
 
-		# for each sample, make a vcf containing only passing indels
+# 		# for each sample, make a vcf containing only passing indels
 
-			PASSING_INDELS_ON_BAIT_BY_SAMPLE ()
-			{
-				echo \
-				qsub \
-					-S /bin/bash \
-					-cwd \
-					-V \
-					-q $QUEUE_LIST \
-					-p $PRIORITY \
-					-j y \
-				-N J02A04_PASSING_INDELS_ON_BAIT_BY_SAMPLE_$UNIQUE_ID_SM_TAG \
-					-o $CORE_PATH/$PROJECT_MS/LOGS/$SM_TAG/J02A04_PASSING_INDELS_ON_BAIT_BY_SAMPLE_$SAMPLE.log \
-				-hold_jid J02_SELECT_VARIANTS_FOR_SAMPLE_$UNIQUE_ID_SM_TAG \
-				$SCRIPT_DIR/J02A04_PASSING_INDELS_ON_BAIT_BY_SAMPLE.sh \
-					$JAVA_1_8 \
-					$GATK_DIR \
-					$SAMPLE_REF_GENOME \
-					$CORE_PATH \
-					$PROJECT_SAMPLE \
-					$SM_TAG
-			}
+# 			PASSING_INDELS_ON_BAIT_BY_SAMPLE ()
+# 			{
+# 				echo \
+# 				qsub \
+# 					-S /bin/bash \
+# 					-cwd \
+# 					-V \
+# 					-q $QUEUE_LIST \
+# 					-p $PRIORITY \
+# 					-j y \
+# 				-N J02A04_PASSING_INDELS_ON_BAIT_BY_SAMPLE_$UNIQUE_ID_SM_TAG \
+# 					-o $CORE_PATH/$PROJECT_MS/LOGS/$SM_TAG/J02A04_PASSING_INDELS_ON_BAIT_BY_SAMPLE_$SAMPLE.log \
+# 				-hold_jid J02_SELECT_VARIANTS_FOR_SAMPLE_$UNIQUE_ID_SM_TAG \
+# 				$SCRIPT_DIR/J02A04_PASSING_INDELS_ON_BAIT_BY_SAMPLE.sh \
+# 					$JAVA_1_8 \
+# 					$GATK_DIR \
+# 					$SAMPLE_REF_GENOME \
+# 					$CORE_PATH \
+# 					$PROJECT_SAMPLE \
+# 					$SM_TAG
+# 			}
 
-		# for each sample, make a vcf containing only passing indels that fall within the on target bed file
+# 		# for each sample, make a vcf containing only passing indels that fall within the on target bed file
 
-			PASSING_INDELS_ON_TARGET_BY_SAMPLE ()
-			{
-				echo \
-				qsub \
-					-S /bin/bash \
-					-cwd \
-					-V \
-					-q $QUEUE_LIST \
-					-p $PRIORITY \
-					-j y \
-				-N J02A05_PASSING_INDELS_ON_TARGET_BY_SAMPLE_$UNIQUE_ID_SM_TAG \
-					-o $CORE_PATH/$PROJECT_MS/LOGS/$SM_TAG/J02A05_PASSING_INDELS_ON_TARGET_BY_SAMPLE_$SAMPLE.log \
-				-hold_jid J02_SELECT_VARIANTS_FOR_SAMPLE_$UNIQUE_ID_SM_TAG \
-				$SCRIPT_DIR/J02A05_PASSING_INDELS_ON_TARGET_BY_SAMPLE.sh \
-					$JAVA_1_8 \
-					$GATK_DIR \
-					$SAMPLE_REF_GENOME \
-					$CORE_PATH \
-					$PROJECT_SAMPLE \
-					$SM_TAG \
-					$TARGET_BED
-			}
+# 			PASSING_INDELS_ON_TARGET_BY_SAMPLE ()
+# 			{
+# 				echo \
+# 				qsub \
+# 					-S /bin/bash \
+# 					-cwd \
+# 					-V \
+# 					-q $QUEUE_LIST \
+# 					-p $PRIORITY \
+# 					-j y \
+# 				-N J02A05_PASSING_INDELS_ON_TARGET_BY_SAMPLE_$UNIQUE_ID_SM_TAG \
+# 					-o $CORE_PATH/$PROJECT_MS/LOGS/$SM_TAG/J02A05_PASSING_INDELS_ON_TARGET_BY_SAMPLE_$SAMPLE.log \
+# 				-hold_jid J02_SELECT_VARIANTS_FOR_SAMPLE_$UNIQUE_ID_SM_TAG \
+# 				$SCRIPT_DIR/J02A05_PASSING_INDELS_ON_TARGET_BY_SAMPLE.sh \
+# 					$JAVA_1_8 \
+# 					$GATK_DIR \
+# 					$SAMPLE_REF_GENOME \
+# 					$CORE_PATH \
+# 					$PROJECT_SAMPLE \
+# 					$SM_TAG \
+# 					$TARGET_BED
+# 			}
 
-	########################################################
-	### grabbing per sample snv only vcf files for ti/tv ###
-	########################################################
+# 	########################################################
+# 	### grabbing per sample snv only vcf files for ti/tv ###
+# 	########################################################
 
-		# for each sample, make a vcf containing only passing snvs that fall within the on titv bed file
+# 		# for each sample, make a vcf containing only passing snvs that fall within the on titv bed file
 
-			PASSING_SNVS_TITV_ALL ()
-			{
-				echo \
-				qsub \
-					-S /bin/bash \
-					-cwd \
-					-V \
-					-q $QUEUE_LIST \
-					-p $PRIORITY \
-					-j y \
-				-N J02A06_PASSING_SNVS_TITV_ALL_$UNIQUE_ID_SM_TAG \
-					-o $CORE_PATH/$PROJECT_MS/LOGS/$SM_TAG/J02A06_PASSING_SNVS_TITV_ALL_$SAMPLE.log \
-				-hold_jid J02_SELECT_VARIANTS_FOR_SAMPLE_$UNIQUE_ID_SM_TAG \
-				$SCRIPT_DIR/J02A06_PASSING_SNVS_TITV_ALL.sh \
-					$JAVA_1_8 \
-					$GATK_DIR \
-					$SAMPLE_REF_GENOME \
-					$CORE_PATH \
-					$PROJECT_SAMPLE \
-					$SM_TAG \
-					$TITV_BED
-			}
+# 			PASSING_SNVS_TITV_ALL ()
+# 			{
+# 				echo \
+# 				qsub \
+# 					-S /bin/bash \
+# 					-cwd \
+# 					-V \
+# 					-q $QUEUE_LIST \
+# 					-p $PRIORITY \
+# 					-j y \
+# 				-N J02A06_PASSING_SNVS_TITV_ALL_$UNIQUE_ID_SM_TAG \
+# 					-o $CORE_PATH/$PROJECT_MS/LOGS/$SM_TAG/J02A06_PASSING_SNVS_TITV_ALL_$SAMPLE.log \
+# 				-hold_jid J02_SELECT_VARIANTS_FOR_SAMPLE_$UNIQUE_ID_SM_TAG \
+# 				$SCRIPT_DIR/J02A06_PASSING_SNVS_TITV_ALL.sh \
+# 					$JAVA_1_8 \
+# 					$GATK_DIR \
+# 					$SAMPLE_REF_GENOME \
+# 					$CORE_PATH \
+# 					$PROJECT_SAMPLE \
+# 					$SM_TAG \
+# 					$TITV_BED
+# 			}
 
-			# for each sample, calculate ti/tv for all passing snvs within the ti/tv bed file
+# 			# for each sample, calculate ti/tv for all passing snvs within the ti/tv bed file
 
-				TITV_ALL ()
-				{
-					echo \
-					qsub \
-						-S /bin/bash \
-						-cwd \
-						-V \
-						-q $QUEUE_LIST \
-						-p $PRIORITY \
-						-j y \
-					-N J02A06-1_TITV_ALL_$UNIQUE_ID_SM_TAG \
-						-o $CORE_PATH/$PROJECT_MS/LOGS/$SM_TAG/J02A06-1_TITV_ALL_$SAMPLE.log \
-					-hold_jid J02A06_PASSING_SNVS_TITV_ALL_$UNIQUE_ID_SM_TAG \
-					$SCRIPT_DIR/J02A06-1_TITV_ALL.sh \
-						$SAMTOOLS_0118_DIR \
-						$CORE_PATH \
-						$PROJECT_SAMPLE \
-						$SM_TAG
-				}
+# 				TITV_ALL ()
+# 				{
+# 					echo \
+# 					qsub \
+# 						-S /bin/bash \
+# 						-cwd \
+# 						-V \
+# 						-q $QUEUE_LIST \
+# 						-p $PRIORITY \
+# 						-j y \
+# 					-N J02A06-1_TITV_ALL_$UNIQUE_ID_SM_TAG \
+# 						-o $CORE_PATH/$PROJECT_MS/LOGS/$SM_TAG/J02A06-1_TITV_ALL_$SAMPLE.log \
+# 					-hold_jid J02A06_PASSING_SNVS_TITV_ALL_$UNIQUE_ID_SM_TAG \
+# 					$SCRIPT_DIR/J02A06-1_TITV_ALL.sh \
+# 						$SAMTOOLS_0118_DIR \
+# 						$CORE_PATH \
+# 						$PROJECT_SAMPLE \
+# 						$SM_TAG
+# 				}
 
-		# for each sample, make a vcf containing only passing snvs that fall within the on titv bed file and are in dbsnp129
+# 		# for each sample, make a vcf containing only passing snvs that fall within the on titv bed file and are in dbsnp129
 
-			PASSING_SNVS_TITV_KNOWN ()
-			{
-				echo \
-				qsub \
-					-S /bin/bash \
-					-cwd \
-					-V \
-					-q $QUEUE_LIST \
-					-p $PRIORITY \
-					-j y \
-				-N J02A07_PASSING_SNVS_TITV_KNOWN_$UNIQUE_ID_SM_TAG \
-					-o $CORE_PATH/$PROJECT_MS/LOGS/$SM_TAG/J02A07_PASSING_SNVS_TITV_KNOWN_$SAMPLE.log \
-				-hold_jid J02_SELECT_VARIANTS_FOR_SAMPLE_$UNIQUE_ID_SM_TAG \
-				$SCRIPT_DIR/J02A07_PASSING_SNVS_TITV_KNOWN.sh \
-					$JAVA_1_8 \
-					$GATK_DIR \
-					$SAMPLE_REF_GENOME \
-					$KNOWN_SNPS \
-					$CORE_PATH \
-					$PROJECT_SAMPLE \
-					$SM_TAG \
-					$TITV_BED
-			}
+# 			PASSING_SNVS_TITV_KNOWN ()
+# 			{
+# 				echo \
+# 				qsub \
+# 					-S /bin/bash \
+# 					-cwd \
+# 					-V \
+# 					-q $QUEUE_LIST \
+# 					-p $PRIORITY \
+# 					-j y \
+# 				-N J02A07_PASSING_SNVS_TITV_KNOWN_$UNIQUE_ID_SM_TAG \
+# 					-o $CORE_PATH/$PROJECT_MS/LOGS/$SM_TAG/J02A07_PASSING_SNVS_TITV_KNOWN_$SAMPLE.log \
+# 				-hold_jid J02_SELECT_VARIANTS_FOR_SAMPLE_$UNIQUE_ID_SM_TAG \
+# 				$SCRIPT_DIR/J02A07_PASSING_SNVS_TITV_KNOWN.sh \
+# 					$JAVA_1_8 \
+# 					$GATK_DIR \
+# 					$SAMPLE_REF_GENOME \
+# 					$KNOWN_SNPS \
+# 					$CORE_PATH \
+# 					$PROJECT_SAMPLE \
+# 					$SM_TAG \
+# 					$TITV_BED
+# 			}
 
-				# for each sample, calculate ti/tv for all passing snvs within the ti/tv bed file that are in dbsnp129
+# 				# for each sample, calculate ti/tv for all passing snvs within the ti/tv bed file that are in dbsnp129
 
-					TITV_KNOWN ()
-					{
-						echo \
-						qsub \
-							-S /bin/bash \
-							-cwd \
-							-V \
-							-q $QUEUE_LIST \
-							-p $PRIORITY \
-							-j y \
-						-N J02A07-1_TITV_KNOWN_$UNIQUE_ID_SM_TAG \
-							-o $CORE_PATH/$PROJECT_MS/LOGS/$SM_TAG/J02A07-1_TITV_KNOWN_$SAMPLE.log \
-						-hold_jid J02A07_PASSING_SNVS_TITV_KNOWN_$UNIQUE_ID_SM_TAG \
-						$SCRIPT_DIR/J02A07-1_TITV_KNOWN.sh \
-							$SAMTOOLS_0118_DIR \
-							$CORE_PATH \
-							$PROJECT_SAMPLE \
-							$SM_TAG
-					}
+# 					TITV_KNOWN ()
+# 					{
+# 						echo \
+# 						qsub \
+# 							-S /bin/bash \
+# 							-cwd \
+# 							-V \
+# 							-q $QUEUE_LIST \
+# 							-p $PRIORITY \
+# 							-j y \
+# 						-N J02A07-1_TITV_KNOWN_$UNIQUE_ID_SM_TAG \
+# 							-o $CORE_PATH/$PROJECT_MS/LOGS/$SM_TAG/J02A07-1_TITV_KNOWN_$SAMPLE.log \
+# 						-hold_jid J02A07_PASSING_SNVS_TITV_KNOWN_$UNIQUE_ID_SM_TAG \
+# 						$SCRIPT_DIR/J02A07-1_TITV_KNOWN.sh \
+# 							$SAMTOOLS_0118_DIR \
+# 							$CORE_PATH \
+# 							$PROJECT_SAMPLE \
+# 							$SM_TAG
+# 					}
 
-		# for each sample, make a vcf containing only passing snvs that fall within the on titv bed file and are NOT in dbsnp129
+# 		# for each sample, make a vcf containing only passing snvs that fall within the on titv bed file and are NOT in dbsnp129
 
-			PASSING_SNVS_TITV_NOVEL ()
-			{
-				echo \
-				qsub \
-					-S /bin/bash \
-					-cwd \
-					-V \
-					-q $QUEUE_LIST \
-					-p $PRIORITY \
-					-j y \
-				-N J02A08_PASSING_SNVS_TITV_NOVEL_$UNIQUE_ID_SM_TAG \
-					-o $CORE_PATH/$PROJECT_MS/LOGS/$SM_TAG/J02A08_PASSING_SNVS_TITV_NOVEL_$SAMPLE.log \
-				-hold_jid J02_SELECT_VARIANTS_FOR_SAMPLE_$UNIQUE_ID_SM_TAG \
-				$SCRIPT_DIR/J02A08_PASSING_SNVS_TITV_NOVEL.sh \
-					$JAVA_1_8 \
-					$GATK_DIR \
-					$SAMPLE_REF_GENOME \
-					$KNOWN_SNPS \
-					$CORE_PATH \
-					$PROJECT_SAMPLE \
-					$SM_TAG \
-					$TITV_BED
-			}
+# 			PASSING_SNVS_TITV_NOVEL ()
+# 			{
+# 				echo \
+# 				qsub \
+# 					-S /bin/bash \
+# 					-cwd \
+# 					-V \
+# 					-q $QUEUE_LIST \
+# 					-p $PRIORITY \
+# 					-j y \
+# 				-N J02A08_PASSING_SNVS_TITV_NOVEL_$UNIQUE_ID_SM_TAG \
+# 					-o $CORE_PATH/$PROJECT_MS/LOGS/$SM_TAG/J02A08_PASSING_SNVS_TITV_NOVEL_$SAMPLE.log \
+# 				-hold_jid J02_SELECT_VARIANTS_FOR_SAMPLE_$UNIQUE_ID_SM_TAG \
+# 				$SCRIPT_DIR/J02A08_PASSING_SNVS_TITV_NOVEL.sh \
+# 					$JAVA_1_8 \
+# 					$GATK_DIR \
+# 					$SAMPLE_REF_GENOME \
+# 					$KNOWN_SNPS \
+# 					$CORE_PATH \
+# 					$PROJECT_SAMPLE \
+# 					$SM_TAG \
+# 					$TITV_BED
+# 			}
 
-				# for each sample, calculate ti/tv for all passing snvs within the ti/tv bed file that are NOT in dbsnp129
+# 				# for each sample, calculate ti/tv for all passing snvs within the ti/tv bed file that are NOT in dbsnp129
 
-					TITV_NOVEL ()
-					{
-						echo \
-						qsub \
-							-S /bin/bash \
-							-cwd \
-							-V \
-							-q $QUEUE_LIST \
-							-p $PRIORITY \
-							-j y \
-						-N J02A08-1_TITV_NOVEL_$UNIQUE_ID_SM_TAG \
-							-o $CORE_PATH/$PROJECT_MS/LOGS/$SM_TAG/J02A08-1_TITV_NOVEL_$SAMPLE.log \
-						-hold_jid J02A08_PASSING_SNVS_TITV_NOVEL_$UNIQUE_ID_SM_TAG \
-						$SCRIPT_DIR/J02A08-1_TITV_NOVEL.sh \
-							$SAMTOOLS_0118_DIR \
-							$CORE_PATH \
-							$PROJECT_SAMPLE \
-							$SM_TAG
-					}
+# 					TITV_NOVEL ()
+# 					{
+# 						echo \
+# 						qsub \
+# 							-S /bin/bash \
+# 							-cwd \
+# 							-V \
+# 							-q $QUEUE_LIST \
+# 							-p $PRIORITY \
+# 							-j y \
+# 						-N J02A08-1_TITV_NOVEL_$UNIQUE_ID_SM_TAG \
+# 							-o $CORE_PATH/$PROJECT_MS/LOGS/$SM_TAG/J02A08-1_TITV_NOVEL_$SAMPLE.log \
+# 						-hold_jid J02A08_PASSING_SNVS_TITV_NOVEL_$UNIQUE_ID_SM_TAG \
+# 						$SCRIPT_DIR/J02A08-1_TITV_NOVEL.sh \
+# 							$SAMTOOLS_0118_DIR \
+# 							$CORE_PATH \
+# 							$PROJECT_SAMPLE \
+# 							$SM_TAG
+# 					}
 
-	##########################################################################
-	### grabbing per sample indel only vcf files for on bait and on target ###
-	##########################################################################
+# 	##########################################################################
+# 	### grabbing per sample indel only vcf files for on bait and on target ###
+# 	##########################################################################
 
-		# for each sample, make a vcf containing only passing mixed
+# 		# for each sample, make a vcf containing only passing mixed
 
-			PASSING_MIXED_ON_BAIT_BY_SAMPLE ()
-			{
-				echo \
-				qsub \
-					-S /bin/bash \
-					-cwd \
-					-V \
-					-q $QUEUE_LIST \
-					-p $PRIORITY \
-					-j y \
-				-N J02A09_PASSING_MIXED_ON_BAIT_BY_SAMPLE_$UNIQUE_ID_SM_TAG \
-					-o $CORE_PATH/$PROJECT_MS/LOGS/$SM_TAG/J02A09_PASSING_MIXED_ON_BAIT_BY_SAMPLE_$SAMPLE.log \
-				-hold_jid J02_SELECT_VARIANTS_FOR_SAMPLE_$UNIQUE_ID_SM_TAG \
-				$SCRIPT_DIR/J02A09_PASSING_MIXED_ON_BAIT_BY_SAMPLE.sh \
-					$JAVA_1_8 \
-					$GATK_DIR \
-					$SAMPLE_REF_GENOME \
-					$CORE_PATH \
-					$PROJECT_SAMPLE \
-					$SM_TAG
-			}
+# 			PASSING_MIXED_ON_BAIT_BY_SAMPLE ()
+# 			{
+# 				echo \
+# 				qsub \
+# 					-S /bin/bash \
+# 					-cwd \
+# 					-V \
+# 					-q $QUEUE_LIST \
+# 					-p $PRIORITY \
+# 					-j y \
+# 				-N J02A09_PASSING_MIXED_ON_BAIT_BY_SAMPLE_$UNIQUE_ID_SM_TAG \
+# 					-o $CORE_PATH/$PROJECT_MS/LOGS/$SM_TAG/J02A09_PASSING_MIXED_ON_BAIT_BY_SAMPLE_$SAMPLE.log \
+# 				-hold_jid J02_SELECT_VARIANTS_FOR_SAMPLE_$UNIQUE_ID_SM_TAG \
+# 				$SCRIPT_DIR/J02A09_PASSING_MIXED_ON_BAIT_BY_SAMPLE.sh \
+# 					$JAVA_1_8 \
+# 					$GATK_DIR \
+# 					$SAMPLE_REF_GENOME \
+# 					$CORE_PATH \
+# 					$PROJECT_SAMPLE \
+# 					$SM_TAG
+# 			}
 
-		# for each sample, make a vcf containing only passing indels that fall within the on target bed file
+# 		# for each sample, make a vcf containing only passing indels that fall within the on target bed file
 
-			PASSING_MIXED_ON_TARGET_BY_SAMPLE ()
-			{
-				echo \
-				qsub \
-					-S /bin/bash \
-					-cwd \
-					-V \
-					-q $QUEUE_LIST \
-					-p $PRIORITY \
-					-j y \
-				-N J02A10_PASSING_MIXED_ON_TARGET_BY_SAMPLE_$UNIQUE_ID_SM_TAG \
-					-o $CORE_PATH/$PROJECT_MS/LOGS/$SM_TAG/J02A10_PASSING_MIXED_ON_TARGET_BY_SAMPLE_$SAMPLE.log \
-				-hold_jid J02_SELECT_VARIANTS_FOR_SAMPLE_$UNIQUE_ID_SM_TAG \
-				$SCRIPT_DIR/J02A10_PASSING_MIXED_ON_TARGET_BY_SAMPLE.sh \
-					$JAVA_1_8 \
-					$GATK_DIR \
-					$SAMPLE_REF_GENOME \
-					$CORE_PATH \
-					$PROJECT_SAMPLE \
-					$SM_TAG \
-					$TARGET_BED
-			}
+# 			PASSING_MIXED_ON_TARGET_BY_SAMPLE ()
+# 			{
+# 				echo \
+# 				qsub \
+# 					-S /bin/bash \
+# 					-cwd \
+# 					-V \
+# 					-q $QUEUE_LIST \
+# 					-p $PRIORITY \
+# 					-j y \
+# 				-N J02A10_PASSING_MIXED_ON_TARGET_BY_SAMPLE_$UNIQUE_ID_SM_TAG \
+# 					-o $CORE_PATH/$PROJECT_MS/LOGS/$SM_TAG/J02A10_PASSING_MIXED_ON_TARGET_BY_SAMPLE_$SAMPLE.log \
+# 				-hold_jid J02_SELECT_VARIANTS_FOR_SAMPLE_$UNIQUE_ID_SM_TAG \
+# 				$SCRIPT_DIR/J02A10_PASSING_MIXED_ON_TARGET_BY_SAMPLE.sh \
+# 					$JAVA_1_8 \
+# 					$GATK_DIR \
+# 					$SAMPLE_REF_GENOME \
+# 					$CORE_PATH \
+# 					$PROJECT_SAMPLE \
+# 					$SM_TAG \
+# 					$TARGET_BED
+# 			}
 
-	# MAKE A QC REPORT FOR EACH SAMPLE
-	# THIS IS CREATING A JOB_ID FOR A SAMPLE WHEN ALL OF THE BREAKOUTs PER SAMPLE IS DONE
-	# THIS IS TO MITIGATE CREATING A HOLD ID THAT IS TOO LONG FOR GENERATING THE QC REPORT.
-	# ALTHOUGH AT SOME POINT THIS STRING MIGHT END BEING TOO LONG AT SOME POINT.
-	# SO QC REPORTS MIGHT HAVE TO END UP BEING DONE OUTSIDE OF THE PIPELINE FOR SOME BIG PROJECTS.
-	# yucky, yuck...indenting creates a white space in the hold id which does not work so I have to do this hot mess.
+# 	# MAKE A QC REPORT FOR EACH SAMPLE
+# 	# THIS IS CREATING A JOB_ID FOR A SAMPLE WHEN ALL OF THE BREAKOUTs PER SAMPLE IS DONE
+# 	# THIS IS TO MITIGATE CREATING A HOLD ID THAT IS TOO LONG FOR GENERATING THE QC REPORT.
+# 	# ALTHOUGH AT SOME POINT THIS STRING MIGHT END BEING TOO LONG AT SOME POINT.
+# 	# SO QC REPORTS MIGHT HAVE TO END UP BEING DONE OUTSIDE OF THE PIPELINE FOR SOME BIG PROJECTS.
+# 	# yucky, yuck...indenting creates a white space in the hold id which does not work so I have to do this hot mess.
 	
-		QC_REPORT_PREP ()
-		{
-			echo \
-			qsub \
-				-S /bin/bash \
-				-cwd \
-				-V \
-				-q $QUEUE_LIST \
-				-p $PRIORITY \
-				-j y \
-			-N Y"_"$BARCODE_2D \
-				-o $CORE_PATH/$PROJECT_MS/LOGS/$SM_TAG/$SM_TAG"-QC_REPORT_PREP_QC.log" \
-			-hold_jid J02A01_PASSING_VARIANTS_ON_TARGET_BY_SAMPLE_$UNIQUE_ID_SM_TAG,\
-J02A02_PASSING_SNVS_ON_BAIT_BY_SAMPLE_$UNIQUE_ID_SM_TAG,\
-J02A03-1_CONCORDANCE_ON_TARGET_PER_SAMPLE_$UNIQUE_ID_SM_TAG,\
-J02A04_PASSING_INDELS_ON_BAIT_BY_SAMPLE_$UNIQUE_ID_SM_TAG,\
-J02A05_PASSING_INDELS_ON_TARGET_BY_SAMPLE_$UNIQUE_ID_SM_TAG,\
-J02A06-1_TITV_ALL_$UNIQUE_ID_SM_TAG,\
-J02A07-1_TITV_KNOWN_$UNIQUE_ID_SM_TAG,\
-J02A08-1_TITV_NOVEL_$UNIQUE_ID_SM_TAG,\
-J02A09_PASSING_MIXED_ON_BAIT_BY_SAMPLE_$UNIQUE_ID_SM_TAG,\
-J02A10_PASSING_MIXED_ON_TARGET_BY_SAMPLE_$UNIQUE_ID_SM_TAG \
-$SCRIPT_DIR/Y01_QC_REPORT_PREP.sh \
-	$SAMTOOLS_DIR \
-	$DATAMASH_DIR \
-	$CORE_PATH \
-	$PROJECT_SAMPLE \
-	$SM_TAG \
-	$PROJECT_MS \
-	$PREFIX
-		}
+# 		QC_REPORT_PREP ()
+# 		{
+# 			echo \
+# 			qsub \
+# 				-S /bin/bash \
+# 				-cwd \
+# 				-V \
+# 				-q $QUEUE_LIST \
+# 				-p $PRIORITY \
+# 				-j y \
+# 			-N Y"_"$BARCODE_2D \
+# 				-o $CORE_PATH/$PROJECT_MS/LOGS/$SM_TAG/$SM_TAG"-QC_REPORT_PREP_QC.log" \
+# 			-hold_jid J02A01_PASSING_VARIANTS_ON_TARGET_BY_SAMPLE_$UNIQUE_ID_SM_TAG,\
+# J02A02_PASSING_SNVS_ON_BAIT_BY_SAMPLE_$UNIQUE_ID_SM_TAG,\
+# J02A03-1_CONCORDANCE_ON_TARGET_PER_SAMPLE_$UNIQUE_ID_SM_TAG,\
+# J02A04_PASSING_INDELS_ON_BAIT_BY_SAMPLE_$UNIQUE_ID_SM_TAG,\
+# J02A05_PASSING_INDELS_ON_TARGET_BY_SAMPLE_$UNIQUE_ID_SM_TAG,\
+# J02A06-1_TITV_ALL_$UNIQUE_ID_SM_TAG,\
+# J02A07-1_TITV_KNOWN_$UNIQUE_ID_SM_TAG,\
+# J02A08-1_TITV_NOVEL_$UNIQUE_ID_SM_TAG,\
+# J02A09_PASSING_MIXED_ON_BAIT_BY_SAMPLE_$UNIQUE_ID_SM_TAG,\
+# J02A10_PASSING_MIXED_ON_TARGET_BY_SAMPLE_$UNIQUE_ID_SM_TAG \
+# $SCRIPT_DIR/Y01_QC_REPORT_PREP.sh \
+# 	$SAMTOOLS_DIR \
+# 	$DATAMASH_DIR \
+# 	$CORE_PATH \
+# 	$PROJECT_SAMPLE \
+# 	$SM_TAG \
+# 	$PROJECT_MS \
+# 	$PREFIX
+# 		}
 
-for SAMPLE in $(awk 'BEGIN {FS=","} NR>1 {print $8}' $SAMPLE_SHEET | sort | uniq )
-do
-	CREATE_SAMPLE_INFO_ARRAY
-	MAKE_PROJ_DIR_TREE
-	SELECT_PASSING_VARIANTS_PER_SAMPLE
-	echo sleep 0.1s
-	PASSING_VARIANTS_ON_TARGET_BY_SAMPLE
-	echo sleep 0.1s
-	PASSING_SNVS_ON_BAIT_BY_SAMPLE
-	echo sleep 0.1s
-	PASSING_SNVS_ON_TARGET_BY_SAMPLE
-	echo sleep 0.1s
-	CONCORDANCE_ON_TARGET_PER_SAMPLE
-	echo sleep 0.1s
-	PASSING_INDELS_ON_BAIT_BY_SAMPLE
-	echo sleep 0.1s
-	PASSING_INDELS_ON_TARGET_BY_SAMPLE
-	echo sleep 0.1s
-	PASSING_SNVS_TITV_ALL
-	echo sleep 0.1s
-	TITV_ALL
-	echo sleep 0.1s
-	PASSING_SNVS_TITV_KNOWN
-	echo sleep 0.1s
-	TITV_KNOWN
-	echo sleep 0.1s
-	PASSING_SNVS_TITV_NOVEL
-	echo sleep 0.1s
-	TITV_NOVEL
-	echo sleep 0.1s
-	PASSING_MIXED_ON_BAIT_BY_SAMPLE
-	echo sleep 0.1s
-	PASSING_MIXED_ON_TARGET_BY_SAMPLE
-	echo sleep 0.1s
-	QC_REPORT_PREP
-	echo sleep 0.1s
-done
+# for SAMPLE in $(awk 'BEGIN {FS=","} NR>1 {print $8}' $SAMPLE_SHEET | sort | uniq )
+# do
+# 	CREATE_SAMPLE_INFO_ARRAY
+# 	MAKE_PROJ_DIR_TREE
+# 	SELECT_PASSING_VARIANTS_PER_SAMPLE
+# 	echo sleep 0.1s
+# 	PASSING_VARIANTS_ON_TARGET_BY_SAMPLE
+# 	echo sleep 0.1s
+# 	PASSING_SNVS_ON_BAIT_BY_SAMPLE
+# 	echo sleep 0.1s
+# 	PASSING_SNVS_ON_TARGET_BY_SAMPLE
+# 	echo sleep 0.1s
+# 	CONCORDANCE_ON_TARGET_PER_SAMPLE
+# 	echo sleep 0.1s
+# 	PASSING_INDELS_ON_BAIT_BY_SAMPLE
+# 	echo sleep 0.1s
+# 	PASSING_INDELS_ON_TARGET_BY_SAMPLE
+# 	echo sleep 0.1s
+# 	PASSING_SNVS_TITV_ALL
+# 	echo sleep 0.1s
+# 	TITV_ALL
+# 	echo sleep 0.1s
+# 	PASSING_SNVS_TITV_KNOWN
+# 	echo sleep 0.1s
+# 	TITV_KNOWN
+# 	echo sleep 0.1s
+# 	PASSING_SNVS_TITV_NOVEL
+# 	echo sleep 0.1s
+# 	TITV_NOVEL
+# 	echo sleep 0.1s
+# 	PASSING_MIXED_ON_BAIT_BY_SAMPLE
+# 	echo sleep 0.1s
+# 	PASSING_MIXED_ON_TARGET_BY_SAMPLE
+# 	echo sleep 0.1s
+# 	QC_REPORT_PREP
+# 	echo sleep 0.1s
+# done
 
-##########################################################################
-######################End of Functions####################################
-##########################################################################
+# ##########################################################################
+# ######################End of Functions####################################
+# ##########################################################################
 
-	# Maybe I'll make this a function and throw it into a loop, but today is not that day.
-	# I think that i will have to make this a look to handle multiple projects...maybe not
-	# but again, today is not that day.
+# 	# Maybe I'll make this a function and throw it into a loop, but today is not that day.
+# 	# I think that i will have to make this a look to handle multiple projects...maybe not
+# 	# but again, today is not that day.
 
-		awk 'BEGIN {FS=","} NR>1 {print $8}' \
-		$SAMPLE_SHEET \
-			| awk '{split($1,sm_tag,/[@-]/)} {print sm_tag[2]}' \
-			| sort -k 1,1 \
-			| uniq \
-			| $DATAMASH_DIR/datamash \
-				-s \
-				collapse 1 \
-			| awk 'gsub (/,/,",Y_",$1) \
-				{print "qsub",\
-					"-S /bin/bash",\
-					"-cwd",\
-					"-V",\
-					"-q" , "'$QUEUE_LIST'",\
-					"-p" , "'$PRIORITY'",\
-					"-j y",\
-					"-m","e",\
-					"-M","cidr_sequencing_notifications@lists.johnshopkins.edu",\
-				"-N" , "Y01-Y01-END_PROJECT_TASKS_" "'$PREFIX'",\
-					"-o","'$CORE_PATH'" "/" "'$PROJECT_MS'" "/LOGS/Y01-Y01-" "'$PREFIX'" ".END_PROJECT_TASKS.log",\
-				"-hold_jid" , "Y_"$1,\
-				"'$SCRIPT_DIR'" "/Y01-Y01_END_PROJECT_TASKS.sh",\
-					"'$CORE_PATH'",\
-					"'$DATAMASH_DIR'",\
-					"'$PROJECT_MS'",\
-					"'$PREFIX'",\
-					"'$SAMPLE_SHEET'" "\n" "sleep 0.1s"}'	
+# 		awk 'BEGIN {FS=","} NR>1 {print $8}' \
+# 		$SAMPLE_SHEET \
+# 			| awk '{split($1,sm_tag,/[@-]/)} {print sm_tag[2]}' \
+# 			| sort -k 1,1 \
+# 			| uniq \
+# 			| $DATAMASH_DIR/datamash \
+# 				-s \
+# 				collapse 1 \
+# 			| awk 'gsub (/,/,",Y_",$1) \
+# 				{print "qsub",\
+# 					"-S /bin/bash",\
+# 					"-cwd",\
+# 					"-V",\
+# 					"-q" , "'$QUEUE_LIST'",\
+# 					"-p" , "'$PRIORITY'",\
+# 					"-j y",\
+# 					"-m","e",\
+# 					"-M","cidr_sequencing_notifications@lists.johnshopkins.edu",\
+# 				"-N" , "Y01-Y01-END_PROJECT_TASKS_" "'$PREFIX'",\
+# 					"-o","'$CORE_PATH'" "/" "'$PROJECT_MS'" "/LOGS/Y01-Y01-" "'$PREFIX'" ".END_PROJECT_TASKS.log",\
+# 				"-hold_jid" , "Y_"$1,\
+# 				"'$SCRIPT_DIR'" "/Y01-Y01_END_PROJECT_TASKS.sh",\
+# 					"'$CORE_PATH'",\
+# 					"'$DATAMASH_DIR'",\
+# 					"'$PROJECT_MS'",\
+# 					"'$PREFIX'",\
+# 					"'$SAMPLE_SHEET'" "\n" "sleep 0.1s"}'	
+
+# email when finished submitting
+
+	SCATTER_COUNT=`ls $CORE_PATH/$PROJECT_MS/TEMP/BED_FILE_SPLIT/BF*bed | wc -l`
+
+	STUDY_COUNT=`awk '{print "basename",$1,".g.vcf.gz"}' $GVCF_LIST | bash | grep ^[0-9] | wc -l`
+
+	HAPMAP_COUNT=`awk '{print "basename",$1,".g.vcf.gz"}' $GVCF_LIST | bash | grep -v ^[0-9] | wc -l`
+
+	printf "$SAMPLE_SHEET\nhas finished submitting at\n`date`\nby `whoami`\nMULTI-SAMPLE VCF OUTPUT PROJECT IS:\n$PROJECT_MS\nVCF PREFIX IS:\n$PREFIX\nSCATTER IS $SCATTER_COUNT\n$TOTAL_SAMPLES samples called together\n$STUDY_COUNT study samples\n$HAPMAP_COUNT HapMap samples" \
+		| mail -s "JOINT_CALL_SUBMITTER.sh for CMG PIPELINE UPDATE ANALYSIS has submitted" \
+			-r khetric1@jhmi.edu \
+			cidr_sequencing_notifications@lists.johnshopkins.edu

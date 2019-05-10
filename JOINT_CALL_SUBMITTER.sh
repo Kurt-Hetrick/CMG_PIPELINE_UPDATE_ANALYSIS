@@ -94,7 +94,7 @@
 	ExAC="/mnt/research/tools/PIPELINE_FILES/GRCh37_aux_files/ExAC.r0.3.sites.vep.vcf.gz"
 	KNOWN_SNPS="/mnt/research/tools/PIPELINE_FILES/GATK_resource_bundle/2.8/b37/dbsnp_138.b37.excluding_sites_after_129.vcf"
 	VERACODE_CSV="/mnt/linuxtools/CIDRSEQSUITE/Veracode_hg18_hg19.csv"
-	MERGED_MENDEL_BED_FILE="/mnt/research/active/M_Valle_MD_SeqWholeExome_120417_1/BED_Files/BAITS_Merged_S03723314_S06588914.bed"
+	MERGED_MENDEL_BED_FILE="/mnt/research/active/M_Valle_MD_SeqWholeExome_120417_1/BED_Files/BAITS_Merged_S03723314_S06588914_TwistCUEXmito.bed"
 
 ##################################################
 ##################################################
@@ -180,8 +180,7 @@
 				# SORT TO GRCH37 ORDER
 				(awk '$1~/^[0-9]/' $CORE_PATH/$PROJECT_MS/TEMP/BED_FILE_SPLIT/FORMATTED_BED_FILE.bed | sort -k1,1n -k2,2n ; \
 				 	awk '$1=="X"' $CORE_PATH/$PROJECT_MS/TEMP/BED_FILE_SPLIT/FORMATTED_BED_FILE.bed | sort -k 2,2n ; \
-				 	awk '$1=="Y"' $CORE_PATH/$PROJECT_MS/TEMP/BED_FILE_SPLIT/FORMATTED_BED_FILE.bed | sort -k 2,2n ; \
-				 	awk '$1=="MT"' $CORE_PATH/$PROJECT_MS/TEMP/BED_FILE_SPLIT/FORMATTED_BED_FILE.bed | sort -k 2,2n) \
+					awk '$1=="Y"' $CORE_PATH/$PROJECT_MS/TEMP/BED_FILE_SPLIT/FORMATTED_BED_FILE.bed | sort -k 2,2n) \
 				>| $CORE_PATH/$PROJECT_MS/TEMP/BED_FILE_SPLIT/FORMATTED_AND_SORTED_BED_FILE.bed
 
 			# Determining how many records will be in each mini-bed file.
@@ -695,253 +694,253 @@ done
 		COMBINE_VARIANTS_VCF
 		echo sleep 0.1s
 
-#########################################################
-#########################################################
-##### VARIANT SUMMARY STATS VCF BREAKOUTS ###############
-#########################################################
-#########################################################
+# #########################################################
+# #########################################################
+# ##### VARIANT SUMMARY STATS VCF BREAKOUTS ###############
+# #########################################################
+# #########################################################
 
-	#################################################################################################
-	### generate separate sample lists for hapmap samples and study samples #########################
-	### these are to do breakouts of the refined multi-sample vcf for Hua's variant summary stats ###
-	#################################################################################################
+# 	#################################################################################################
+# 	### generate separate sample lists for hapmap samples and study samples #########################
+# 	### these are to do breakouts of the refined multi-sample vcf for Hua's variant summary stats ###
+# 	#################################################################################################
 
-		# generate list files by parsing the header of the final ms vcf file
-			GENERATE_STUDY_HAPMAP_SAMPLE_LISTS ()
-			{
-				HAP_MAP_SAMPLE_LIST=(`echo $CORE_PATH'/'$PROJECT_MS'/MULTI_SAMPLE/VARIANT_SUMMARY_STAT_VCF/'$PREFIX'_hapmap_samples.list'`)
+# 		# generate list files by parsing the header of the final ms vcf file
+# 			GENERATE_STUDY_HAPMAP_SAMPLE_LISTS ()
+# 			{
+# 				HAP_MAP_SAMPLE_LIST=(`echo $CORE_PATH'/'$PROJECT_MS'/MULTI_SAMPLE/VARIANT_SUMMARY_STAT_VCF/'$PREFIX'_hapmap_samples.args'`)
 
-				MENDEL_SAMPLE_LIST=(`echo $CORE_PATH'/'$PROJECT_MS'/MULTI_SAMPLE/VARIANT_SUMMARY_STAT_VCF/'$PREFIX'_study_samples.list'`)
+# 				MENDEL_SAMPLE_LIST=(`echo $CORE_PATH'/'$PROJECT_MS'/MULTI_SAMPLE/VARIANT_SUMMARY_STAT_VCF/'$PREFIX'_study_samples.args'`)
 
-				# technically don't have to wait on the gather to happen to do this, but for simplicity sake...
-				# if performance becomes an issue then can revisit
+# 				# technically don't have to wait on the gather to happen to do this, but for simplicity sake...
+# 				# if performance becomes an issue then can revisit
 
-					echo \
-						qsub \
-							-S /bin/bash \
-				 			-cwd \
-				 			-V \
-				 			-q $QUEUE_LIST \
-				 			-p $PRIORITY \
-				 			-j y \
-						-N J01_GENERATE_STUDY_HAPMAP_SAMPLE_LISTS_$PROJECT_MS \
-							-o $CORE_PATH/$PROJECT_MS/LOGS/$PREFIX'_J01_GENERATE_STUDY_HAPMAP_SAMPLE_LISTS.log' \
-				 		-hold_jid I01_COMBINE_VARIANTS_VCF_$PROJECT_MS \
-						$SCRIPT_DIR/J01_GENERATE_STUDY_HAPMAP_SAMPLE_LISTS.sh \
-							$CORE_PATH \
-							$PROJECT_MS \
-							$PREFIX
-			}
+# 					echo \
+# 						qsub \
+# 							-S /bin/bash \
+# 				 			-cwd \
+# 				 			-V \
+# 				 			-q $QUEUE_LIST \
+# 				 			-p $PRIORITY \
+# 				 			-j y \
+# 						-N J01_GENERATE_STUDY_HAPMAP_SAMPLE_LISTS_$PROJECT_MS \
+# 							-o $CORE_PATH/$PROJECT_MS/LOGS/$PREFIX'_J01_GENERATE_STUDY_HAPMAP_SAMPLE_LISTS.log' \
+# 				 		-hold_jid I01_COMBINE_VARIANTS_VCF_$PROJECT_MS \
+# 						$SCRIPT_DIR/J01_GENERATE_STUDY_HAPMAP_SAMPLE_LISTS.sh \
+# 							$CORE_PATH \
+# 							$PROJECT_MS \
+# 							$PREFIX
+# 			}
 
-		# select all the snp sites
-			SELECT_SNVS_ALL ()
-			{
-				echo \
-				 qsub \
-					-S /bin/bash \
-			 		-cwd \
-			 		-V \
-			 		-q $QUEUE_LIST \
-			 		-p $PRIORITY \
-			 		-j y \
-				-N J01A01_SELECT_SNPS_FOR_ALL_SAMPLES_$PROJECT_MS \
-				 	-o $CORE_PATH/$PROJECT_MS/LOGS/$PREFIX'_J01A01_SELECT_SNPS_FOR_ALL_SAMPLES.log' \
-				 -hold_jid J01_GENERATE_STUDY_HAPMAP_SAMPLE_LISTS_$PROJECT_MS \
-				$SCRIPT_DIR/J01A01_SELECT_ALL_SAMPLES_SNP.sh \
-				 	$JAVA_1_8 \
-				 	$GATK_DIR \
-				 	$REF_GENOME \
-				 	$CORE_PATH \
-				 	$PROJECT_MS \
-				 	$PREFIX
-			}
+# 		# select all the snp sites
+# 			SELECT_SNVS_ALL ()
+# 			{
+# 				echo \
+# 				 qsub \
+# 					-S /bin/bash \
+# 			 		-cwd \
+# 			 		-V \
+# 			 		-q $QUEUE_LIST \
+# 			 		-p $PRIORITY \
+# 			 		-j y \
+# 				-N J01A01_SELECT_SNPS_FOR_ALL_SAMPLES_$PROJECT_MS \
+# 				 	-o $CORE_PATH/$PROJECT_MS/LOGS/$PREFIX'_J01A01_SELECT_SNPS_FOR_ALL_SAMPLES.log' \
+# 				 -hold_jid J01_GENERATE_STUDY_HAPMAP_SAMPLE_LISTS_$PROJECT_MS \
+# 				$SCRIPT_DIR/J01A01_SELECT_ALL_SAMPLES_SNP.sh \
+# 				 	$JAVA_1_8 \
+# 				 	$GATK_DIR \
+# 				 	$REF_GENOME \
+# 				 	$CORE_PATH \
+# 				 	$PROJECT_MS \
+# 				 	$PREFIX
+# 			}
 
-		# select only passing snp sites that are polymorphic for the study samples
-		# the list are for excluding those samples from the vcf
-			SELECT_PASS_STUDY_ONLY_SNP ()
-			{
-				echo \
-				qsub \
-					-S /bin/bash \
-			 		-cwd \
-			 		-V \
-			 		-q $QUEUE_LIST \
-			 		-p $PRIORITY \
-			 		-j y \
-				-N J01A02_SELECT_PASS_STUDY_ONLY_SNP_$PROJECT_MS \
-					-o $CORE_PATH/$PROJECT_MS/LOGS/$PREFIX'_J01A02_SELECT_PASS_STUDY_ONLY_SNP.log' \
-				-hold_jid J01_GENERATE_STUDY_HAPMAP_SAMPLE_LISTS_$PROJECT_MS \
-				$SCRIPT_DIR/J01A02_SELECT_PASS_STUDY_ONLY_SNP.sh \
-					$JAVA_1_8 \
-					$GATK_DIR \
-					$REF_GENOME \
-				 	$CORE_PATH \
-				 	$PROJECT_MS \
-				 	$PREFIX \
-				 	$HAP_MAP_SAMPLE_LIST
-			}
+# 		# select only passing snp sites that are polymorphic for the study samples
+# 		# the list are for excluding those samples from the vcf
+# 			SELECT_PASS_STUDY_ONLY_SNP ()
+# 			{
+# 				echo \
+# 				qsub \
+# 					-S /bin/bash \
+# 			 		-cwd \
+# 			 		-V \
+# 			 		-q $QUEUE_LIST \
+# 			 		-p $PRIORITY \
+# 			 		-j y \
+# 				-N J01A02_SELECT_PASS_STUDY_ONLY_SNP_$PROJECT_MS \
+# 					-o $CORE_PATH/$PROJECT_MS/LOGS/$PREFIX'_J01A02_SELECT_PASS_STUDY_ONLY_SNP.log' \
+# 				-hold_jid J01_GENERATE_STUDY_HAPMAP_SAMPLE_LISTS_$PROJECT_MS \
+# 				$SCRIPT_DIR/J01A02_SELECT_PASS_STUDY_ONLY_SNP.sh \
+# 					$JAVA_1_8 \
+# 					$GATK_DIR \
+# 					$REF_GENOME \
+# 				 	$CORE_PATH \
+# 				 	$PROJECT_MS \
+# 				 	$PREFIX \
+# 				 	$HAP_MAP_SAMPLE_LIST
+# 			}
 
-		# select only passing snp sites that are polymorphic for the hapmap samples
-		# the list are for excluding those samples from the vcf
-			SELECT_PASS_HAPMAP_ONLY_SNP ()
-			{
-				echo \
-				qsub \
-					-S /bin/bash \
-			 		-cwd \
-			 		-V \
-			 		-q $QUEUE_LIST \
-			 		-p $PRIORITY \
-			 		-j y \
-				-N J01A03_SELECT_PASS_HAPMAP_ONLY_SNP_$PROJECT_MS \
-				 	-o $CORE_PATH/$PROJECT_MS/LOGS/$PREFIX'_J01A03_SELECT_PASS_HAPMAP_ONLY_SNP.log' \
-				-hold_jid J01_GENERATE_STUDY_HAPMAP_SAMPLE_LISTS_$PROJECT_MS \
-				$SCRIPT_DIR/J01A03_SELECT_PASS_HAPMAP_ONLY_SNP.sh \
-					$JAVA_1_8 \
-					$GATK_DIR \
-					$REF_GENOME \
-				 	$CORE_PATH \
-				 	$PROJECT_MS \
-				 	$PREFIX \
-				 	$MENDEL_SAMPLE_LIST
-			}
+# 		# select only passing snp sites that are polymorphic for the hapmap samples
+# 		# the list are for excluding those samples from the vcf
+# 			SELECT_PASS_HAPMAP_ONLY_SNP ()
+# 			{
+# 				echo \
+# 				qsub \
+# 					-S /bin/bash \
+# 			 		-cwd \
+# 			 		-V \
+# 			 		-q $QUEUE_LIST \
+# 			 		-p $PRIORITY \
+# 			 		-j y \
+# 				-N J01A03_SELECT_PASS_HAPMAP_ONLY_SNP_$PROJECT_MS \
+# 				 	-o $CORE_PATH/$PROJECT_MS/LOGS/$PREFIX'_J01A03_SELECT_PASS_HAPMAP_ONLY_SNP.log' \
+# 				-hold_jid J01_GENERATE_STUDY_HAPMAP_SAMPLE_LISTS_$PROJECT_MS \
+# 				$SCRIPT_DIR/J01A03_SELECT_PASS_HAPMAP_ONLY_SNP.sh \
+# 					$JAVA_1_8 \
+# 					$GATK_DIR \
+# 					$REF_GENOME \
+# 				 	$CORE_PATH \
+# 				 	$PROJECT_MS \
+# 				 	$PREFIX \
+# 				 	$MENDEL_SAMPLE_LIST
+# 			}
 
-		# select all the indel (and mixed) sites
-			SELECT_INDELS_ALL ()
-			{
-				echo \
-				qsub \
-					-S /bin/bash \
-			 		-cwd \
-			 		-V \
-			 		-q $QUEUE_LIST \
-			 		-p $PRIORITY \
-			 		-j y \
-				-N J01A04_SELECT_INDELS_FOR_ALL_SAMPLES_$PROJECT_MS \
-					-o $CORE_PATH/$PROJECT_MS/LOGS/$PREFIX'_J01A04_SELECT_INDELS_FOR_ALL_SAMPLES.log' \
-				-hold_jid J01_GENERATE_STUDY_HAPMAP_SAMPLE_LISTS_$PROJECT_MS \
-				$SCRIPT_DIR/J01A04_SELECT_ALL_SAMPLES_INDELS.sh \
-					$JAVA_1_8 \
-					$GATK_DIR \
-					$REF_GENOME \
-				 	$CORE_PATH \
-				 	$PROJECT_MS \
-				 	$PREFIX
-			}
+# 		# select all the indel (and mixed) sites
+# 			SELECT_INDELS_ALL ()
+# 			{
+# 				echo \
+# 				qsub \
+# 					-S /bin/bash \
+# 			 		-cwd \
+# 			 		-V \
+# 			 		-q $QUEUE_LIST \
+# 			 		-p $PRIORITY \
+# 			 		-j y \
+# 				-N J01A04_SELECT_INDELS_FOR_ALL_SAMPLES_$PROJECT_MS \
+# 					-o $CORE_PATH/$PROJECT_MS/LOGS/$PREFIX'_J01A04_SELECT_INDELS_FOR_ALL_SAMPLES.log' \
+# 				-hold_jid J01_GENERATE_STUDY_HAPMAP_SAMPLE_LISTS_$PROJECT_MS \
+# 				$SCRIPT_DIR/J01A04_SELECT_ALL_SAMPLES_INDELS.sh \
+# 					$JAVA_1_8 \
+# 					$GATK_DIR \
+# 					$REF_GENOME \
+# 				 	$CORE_PATH \
+# 				 	$PROJECT_MS \
+# 				 	$PREFIX
+# 			}
 
-		# select only passing indel/mixed sites that are polymorphic for the study samples
-			SELECT_PASS_STUDY_ONLY_INDELS ()
-			{
-				echo \
-				qsub \
-					-S /bin/bash \
-			 		-cwd \
-			 		-V \
-			 		-q $QUEUE_LIST \
-			 		-p $PRIORITY \
-			 		-j y \
-				-N J01A05_SELECT_PASS_STUDY_ONLY_INDEL_$PROJECT_MS \
-					-o $CORE_PATH/$PROJECT_MS/LOGS/$PREFIX'_J01A05_SELECT_PASS_STUDY_ONLY_INDEL.log' \
-				-hold_jid J01_GENERATE_STUDY_HAPMAP_SAMPLE_LISTS_$PROJECT_MS \
-				$SCRIPT_DIR/J01A05_SELECT_PASS_STUDY_ONLY_INDEL.sh \
-					$JAVA_1_8 \
-					$GATK_DIR \
-					$REF_GENOME \
-				 	$CORE_PATH \
-				 	$PROJECT_MS \
-				 	$PREFIX \
-				 	$HAP_MAP_SAMPLE_LIST
-			}
+# 		# select only passing indel/mixed sites that are polymorphic for the study samples
+# 			SELECT_PASS_STUDY_ONLY_INDELS ()
+# 			{
+# 				echo \
+# 				qsub \
+# 					-S /bin/bash \
+# 			 		-cwd \
+# 			 		-V \
+# 			 		-q $QUEUE_LIST \
+# 			 		-p $PRIORITY \
+# 			 		-j y \
+# 				-N J01A05_SELECT_PASS_STUDY_ONLY_INDEL_$PROJECT_MS \
+# 					-o $CORE_PATH/$PROJECT_MS/LOGS/$PREFIX'_J01A05_SELECT_PASS_STUDY_ONLY_INDEL.log' \
+# 				-hold_jid J01_GENERATE_STUDY_HAPMAP_SAMPLE_LISTS_$PROJECT_MS \
+# 				$SCRIPT_DIR/J01A05_SELECT_PASS_STUDY_ONLY_INDEL.sh \
+# 					$JAVA_1_8 \
+# 					$GATK_DIR \
+# 					$REF_GENOME \
+# 				 	$CORE_PATH \
+# 				 	$PROJECT_MS \
+# 				 	$PREFIX \
+# 				 	$HAP_MAP_SAMPLE_LIST
+# 			}
 
-		# select only passing indel/mixed sites that are polymorphic for the hapmap samples
-			SELECT_PASS_HAPMAP_ONLY_INDELS ()
-			{
-				echo \
-				qsub \
-					-S /bin/bash \
-			 		-cwd \
-			 		-V \
-			 		-q $QUEUE_LIST \
-			 		-p $PRIORITY \
-			 		-j y \
-				-N J01A06_SELECT_PASS_HAPMAP_ONLY_INDEL_$PROJECT_MS \
-					-o $CORE_PATH/$PROJECT_MS/LOGS/$PREFIX'_J01A06_SELECT_PASS_HAPMAP_ONLY_INDEL.log' \
-				-hold_jid J01_GENERATE_STUDY_HAPMAP_SAMPLE_LISTS_$PROJECT_MS \
-				$SCRIPT_DIR/J01A06_SELECT_PASS_HAPMAP_ONLY_INDEL.sh \
-					$JAVA_1_8 \
-					$GATK_DIR \
-					$REF_GENOME \
-				 	$CORE_PATH \
-				 	$PROJECT_MS \
-				 	$PREFIX \
-				 	$MENDEL_SAMPLE_LIST
-			}
+# 		# select only passing indel/mixed sites that are polymorphic for the hapmap samples
+# 			SELECT_PASS_HAPMAP_ONLY_INDELS ()
+# 			{
+# 				echo \
+# 				qsub \
+# 					-S /bin/bash \
+# 			 		-cwd \
+# 			 		-V \
+# 			 		-q $QUEUE_LIST \
+# 			 		-p $PRIORITY \
+# 			 		-j y \
+# 				-N J01A06_SELECT_PASS_HAPMAP_ONLY_INDEL_$PROJECT_MS \
+# 					-o $CORE_PATH/$PROJECT_MS/LOGS/$PREFIX'_J01A06_SELECT_PASS_HAPMAP_ONLY_INDEL.log' \
+# 				-hold_jid J01_GENERATE_STUDY_HAPMAP_SAMPLE_LISTS_$PROJECT_MS \
+# 				$SCRIPT_DIR/J01A06_SELECT_PASS_HAPMAP_ONLY_INDEL.sh \
+# 					$JAVA_1_8 \
+# 					$GATK_DIR \
+# 					$REF_GENOME \
+# 				 	$CORE_PATH \
+# 				 	$PROJECT_MS \
+# 				 	$PREFIX \
+# 				 	$MENDEL_SAMPLE_LIST
+# 			}
 
-		# select all passing snp sites
-			SELECT_SNVS_ALL_PASS ()
-			{
-				echo \
-				qsub \
-					-S /bin/bash \
-			 		-cwd \
-			 		-V \
-			 		-q $QUEUE_LIST \
-			 		-p $PRIORITY \
-			 		-j y \
-				-N J01A07_SELECT_SNP_FOR_ALL_SAMPLES_PASS_$PROJECT_MS \
-					-o $CORE_PATH/$PROJECT_MS/LOGS/$PREFIX'_J01A07_SELECT_SNP_FOR_ALL_SAMPLES_PASS.log' \
-				-hold_jid J01_GENERATE_STUDY_HAPMAP_SAMPLE_LISTS_$PROJECT_MS \
-				$SCRIPT_DIR/J01A07_SELECT_ALL_SAMPLES_SNP_PASS.sh \
-					$JAVA_1_8 \
-					$GATK_DIR \
-					$REF_GENOME \
-					$CORE_PATH \
-					$PROJECT_MS \
-					$PREFIX
-			}
+# 		# select all passing snp sites
+# 			SELECT_SNVS_ALL_PASS ()
+# 			{
+# 				echo \
+# 				qsub \
+# 					-S /bin/bash \
+# 			 		-cwd \
+# 			 		-V \
+# 			 		-q $QUEUE_LIST \
+# 			 		-p $PRIORITY \
+# 			 		-j y \
+# 				-N J01A07_SELECT_SNP_FOR_ALL_SAMPLES_PASS_$PROJECT_MS \
+# 					-o $CORE_PATH/$PROJECT_MS/LOGS/$PREFIX'_J01A07_SELECT_SNP_FOR_ALL_SAMPLES_PASS.log' \
+# 				-hold_jid J01_GENERATE_STUDY_HAPMAP_SAMPLE_LISTS_$PROJECT_MS \
+# 				$SCRIPT_DIR/J01A07_SELECT_ALL_SAMPLES_SNP_PASS.sh \
+# 					$JAVA_1_8 \
+# 					$GATK_DIR \
+# 					$REF_GENOME \
+# 					$CORE_PATH \
+# 					$PROJECT_MS \
+# 					$PREFIX
+# 			}
 
-		# select all passing indel/mixed sites
-			SELECT_INDEL_ALL_PASS ()
-			{
-				echo \
-				qsub \
-					-S /bin/bash \
-			 		-cwd \
-			 		-V \
-			 		-q $QUEUE_LIST \
-			 		-p $PRIORITY \
-			 		-j y \
-				-N J01A08_SELECT_INDEL_FOR_ALL_SAMPLES_PASS_$PROJECT_MS \
-					-o $CORE_PATH/$PROJECT_MS/LOGS/$PREFIX'_J01A08_SELECT_INDEL_FOR_ALL_SAMPLES_PASS.log' \
-				-hold_jid J01_GENERATE_STUDY_HAPMAP_SAMPLE_LISTS_$PROJECT_MS \
-				$SCRIPT_DIR/J01A08_SELECT_ALL_SAMPLES_INDEL_PASS.sh \
-					$JAVA_1_8 \
-					$GATK_DIR \
-					$REF_GENOME \
-					$CORE_PATH \
-					$PROJECT_MS \
-					$PREFIX
-			}
+# 		# select all passing indel/mixed sites
+# 			SELECT_INDEL_ALL_PASS ()
+# 			{
+# 				echo \
+# 				qsub \
+# 					-S /bin/bash \
+# 			 		-cwd \
+# 			 		-V \
+# 			 		-q $QUEUE_LIST \
+# 			 		-p $PRIORITY \
+# 			 		-j y \
+# 				-N J01A08_SELECT_INDEL_FOR_ALL_SAMPLES_PASS_$PROJECT_MS \
+# 					-o $CORE_PATH/$PROJECT_MS/LOGS/$PREFIX'_J01A08_SELECT_INDEL_FOR_ALL_SAMPLES_PASS.log' \
+# 				-hold_jid J01_GENERATE_STUDY_HAPMAP_SAMPLE_LISTS_$PROJECT_MS \
+# 				$SCRIPT_DIR/J01A08_SELECT_ALL_SAMPLES_INDEL_PASS.sh \
+# 					$JAVA_1_8 \
+# 					$GATK_DIR \
+# 					$REF_GENOME \
+# 					$CORE_PATH \
+# 					$PROJECT_MS \
+# 					$PREFIX
+# 			}
 
-# variant summary stat vcf breakouts
+# # variant summary stat vcf breakouts
 
-	GENERATE_STUDY_HAPMAP_SAMPLE_LISTS
-	SELECT_SNVS_ALL
-	echo sleep 0.1s
-	SELECT_PASS_STUDY_ONLY_SNP
-	echo sleep 0.1s
-	SELECT_PASS_HAPMAP_ONLY_SNP
-	echo sleep 0.1s
-	SELECT_INDELS_ALL
-	echo sleep 0.1s
-	SELECT_PASS_STUDY_ONLY_INDELS
-	echo sleep 0.1s
-	SELECT_PASS_HAPMAP_ONLY_INDELS
-	echo sleep 0.1s
-	SELECT_SNVS_ALL_PASS
-	echo sleep 0.1s
-	SELECT_INDEL_ALL_PASS
-	echo sleep 0.1s
+# 	GENERATE_STUDY_HAPMAP_SAMPLE_LISTS
+# 	SELECT_SNVS_ALL
+# 	echo sleep 0.1s
+# 	SELECT_PASS_STUDY_ONLY_SNP
+# 	echo sleep 0.1s
+# 	SELECT_PASS_HAPMAP_ONLY_SNP
+# 	echo sleep 0.1s
+# 	SELECT_INDELS_ALL
+# 	echo sleep 0.1s
+# 	SELECT_PASS_STUDY_ONLY_INDELS
+# 	echo sleep 0.1s
+# 	SELECT_PASS_HAPMAP_ONLY_INDELS
+# 	echo sleep 0.1s
+# 	SELECT_SNVS_ALL_PASS
+# 	echo sleep 0.1s
+# 	SELECT_INDEL_ALL_PASS
+# 	echo sleep 0.1s
 
 
 #########################################################################

@@ -34,7 +34,7 @@
 	 | cut -d @ -f 1 \
 	 | sort \
 	 | uniq \
-	 | egrep -v "all.q|cgc.q|programmers.q|rhel7.q|bigmem.q|bina.q|qtest.q|c6420.q" \
+	 | egrep -v "all.q|cgc.q|programmers.q|rhel7.q|bigmem.q|bina.q|qtest.q" \
 	 | datamash collapse 1 \
 	 | awk '{print $1}'`
 
@@ -1071,7 +1071,7 @@ done
 # 			-hold_jid I01_COMBINE_VARIANTS_VCF_$PROJECT_MS \
 # 			$SCRIPT_DIR/J02_SELECT_VARIANTS_FOR_SAMPLE.sh \
 # 				$JAVA_1_8 \
-# 				$GATK_DIR \
+# 				$GATK_DIR_4011 \
 # 				$SAMPLE_REF_GENOME \
 # 				$CORE_PATH \
 # 				$PROJECT_SAMPLE \

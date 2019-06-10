@@ -32,6 +32,12 @@ set
 # create a blank lane b/w the output variables and the program logging output
 echo
 
+# grab the date
+
+date
+
+echo
+
 # INPUT PARAMETERS
 
 	SAMTOOLS_DIR=$1 # needs to be a newer version to read a cram file. e.g. 1.6

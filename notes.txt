@@ -155,12 +155,12 @@ cat FinalResultsSearch-28August2018.REFORMATED.SNV.bed FinalResultsSearch-28Augu
 
 > awk '{print "tabix",\
 "/mnt/research/active/M_Valle_MD_SeqWholeExome_120417_1_NEW/MULTI_SAMPLE/M_Valle_MD_SeqWholeExome_120417_1_NEW_2536.BEDsuperset.VQSR.vcf.gz",$1":"$3"-"$3}' \
-FinalResultsSearch-28August2018.REFORMATED.SNV.bed \
+/mnt/research/tools/LINUX/00_GIT_REPO_KURT/01_ARCHIVE/CMG_PIPELINE_UPDATE_ANALYSIS/results/FinalResultsSearch-28August2018.REFORMATED.SNV.bed \
 | bash \
 | cut -f 1-8 \
 | egrep "VariantType=SNP|VariantType=MULTIALLELIC_SNP" \
 | awk 'BEGIN {OFS="\t"} {print $1,$2-1,$2,$3,$4"->"$5,$6,$7,$8}' \
-| bedtools intersect -wao -a FinalResultsSearch-28August2018.REFORMATED.SNV.bed -b - \
+| bedtools intersect -wao -a /mnt/research/tools/LINUX/00_GIT_REPO_KURT/01_ARCHIVE/CMG_PIPELINE_UPDATE_ANALYSIS/results/FinalResultsSearch-28August2018.REFORMATED.SNV.bed -b - \
 | sed 's/|/\t/g' \
 >| FinalResultsSearch-28August2018.REFORMATED.SNV.bed.vcf.txt
 
@@ -171,12 +171,12 @@ FinalResultsSearch-28August2018.REFORMATED.SNV.bed \
 
 	B. DO THEY ALL PASS THE 99.9% CUT-OFF
 
-	> cut -f 12 FinalResultsSearch-28August2018.REFORMATED.SNV.bed.vcf.txt | sort | uniq -c
+	> cut -f 13 FinalResultsSearch-28August2018.REFORMATED.SNV.bed.vcf.txt | sort | uniq -c
     181 PASS
 
 	C. DO THE REF/ALT ALLELES MATCH
 
-> awk 'BEGIN {OFS="\t"} $4!=$10 {print $1,$2,$3,$4,$6,$7,$8,$9,$10,$11,$12}' FinalResultsSearch-28August2018.REFORMATED.SNV.bed.vcf.txt
+awk 'BEGIN {FS="\t";OFS="\t"} $4!=$11 {print $1,$2,$3,$4,$6,$7,$8,$9,$10,$11,$12,$13}' FinalResultsSearch-28August2018.REFORMATED.SNV.bed.vcf.txt
 1       152083915       152083916       C->T    1       152083915       152083916       .       C->T,*  6403.56 PASS
 16      15809105        15809106        G->C    16      15809105        15809106        rs148621523     G->C,A  3040.29 PASS
 

@@ -74,7 +74,7 @@
 	CIDRSEQSUITE_7_5_0_DIR="/mnt/research/tools/LINUX/CIDRSEQSUITE/7.5.0"
 		# Copied from \\isilon-cifs\sequencing\CIDRSeqSuiteSoftware\RELEASES\7.0.0\QC_REPORT\EnhancedSequencingQCReport.jar
 	LAB_QC_DIR="/mnt/linuxtools/CUSTOM_CIDR/EnhancedSequencingQCReport/0.0.7"
-	SAMTOOLS_DIR="/isilon/sequencing/Kurt/Programs/PYTHON/Anaconda2-5.0.0.1/bin/"
+	SAMTOOLS_DIR="/mnt/linuxtools/ANACONDA/anaconda2-5.0.0.1/bin"
 		# This is samtools version 1.5
 		# I have no idea why other users other than me cannot index a cram file with a version of samtools that I built from the source
 		# Apparently the version that I built with Anaconda works for other users, but it performs REF_CACHE first...
@@ -250,25 +250,25 @@
 	# Generates a QC report for lab specific metrics including Physique Report, Samples Table, Sequencer XML data, Pca and Phoenix.
 	# Does not check if samples are dropped.
 
-		# RUN_LAB_PREP_METRICS ()
-		# {
-		# 	echo \
-		# 	qsub \
-		# 		-S /bin/bash \
-		# 		-cwd \
-		# 		-V \
-		# 		-q $QUEUE_LIST \
-		# 		-p $PRIORITY \
-		# 		-j y \
-		# 	-N A02-LAB_PREP_METRICS"_"$PROJECT_MS \
-		# 		-o $CORE_PATH/$PROJECT_MS/LOGS/$PROJECT_MS"-LAB_PREP_METRICS.log" \
-		# 	$SCRIPT_DIR/A02_LAB_PREP_METRICS.sh \
-		# 		$JAVA_1_8 \
-		# 		$LAB_QC_DIR \
-		# 		$CORE_PATH \
-		# 		$PROJECT_MS \
-		# 		$SAMPLE_SHEET
-		# }
+		RUN_LAB_PREP_METRICS ()
+		{
+			echo \
+			qsub \
+				-S /bin/bash \
+				-cwd \
+				-V \
+				-q $QUEUE_LIST \
+				-p $PRIORITY \
+				-j y \
+			-N A02-LAB_PREP_METRICS"_"$PROJECT_MS \
+				-o $CORE_PATH/$PROJECT_MS/LOGS/$PROJECT_MS"-LAB_PREP_METRICS.log" \
+			$SCRIPT_DIR/A02_LAB_PREP_METRICS.sh \
+				$JAVA_1_8 \
+				$LAB_QC_DIR \
+				$CORE_PATH \
+				$PROJECT_MS \
+				$SAMPLE_SHEET
+		}
 
 ############################################################
 ##### CALL THE ABOVE FUNCTIONS TO SET-UP JOINT CALLING #####
@@ -278,7 +278,7 @@
 	# CREATE_CHROMOSOME_LIST
 	FORMAT_AND_SCATTER_BAIT_BED
 	CREATE_GVCF_LIST
-	# RUN_LAB_PREP_METRICS
+	RUN_LAB_PREP_METRICS
 	echo sleep 0.1s
 
 # #######################################################################
@@ -1478,13 +1478,13 @@ done
 
 # email when finished submitting
 
-	SCATTER_COUNT=`ls $CORE_PATH/$PROJECT_MS/TEMP/BED_FILE_SPLIT/BF*bed | wc -l`
+	# SCATTER_COUNT=`ls $CORE_PATH/$PROJECT_MS/TEMP/BED_FILE_SPLIT/BF*bed | wc -l`
 
-	STUDY_COUNT=`awk '{print "basename",$1,".g.vcf.gz"}' $GVCF_LIST | bash | grep ^[0-9] | wc -l`
+	# STUDY_COUNT=`awk '{print "basename",$1,".g.vcf.gz"}' $GVCF_LIST | bash | grep ^[0-9] | wc -l`
 
-	HAPMAP_COUNT=`awk '{print "basename",$1,".g.vcf.gz"}' $GVCF_LIST | bash | grep -v ^[0-9] | wc -l`
+	# HAPMAP_COUNT=`awk '{print "basename",$1,".g.vcf.gz"}' $GVCF_LIST | bash | grep -v ^[0-9] | wc -l`
 
-	printf "$SAMPLE_SHEET\nhas finished submitting at\n`date`\nby `whoami`\nMULTI-SAMPLE VCF OUTPUT PROJECT IS:\n$PROJECT_MS\nVCF PREFIX IS:\n$PREFIX\nSCATTER IS $SCATTER_COUNT\n$TOTAL_SAMPLES samples called together\n$STUDY_COUNT study samples\n$HAPMAP_COUNT HapMap samples" \
-		| mail -s "JOINT_CALL_SUBMITTER.sh for CMG PIPELINE UPDATE ANALYSIS has submitted" \
-			-r khetric1@jhmi.edu \
-			cidr_sequencing_notifications@lists.johnshopkins.edu
+	# printf "$SAMPLE_SHEET\nhas finished submitting at\n`date`\nby `whoami`\nMULTI-SAMPLE VCF OUTPUT PROJECT IS:\n$PROJECT_MS\nVCF PREFIX IS:\n$PREFIX\nSCATTER IS $SCATTER_COUNT\n$TOTAL_SAMPLES samples called together\n$STUDY_COUNT study samples\n$HAPMAP_COUNT HapMap samples" \
+	# 	| mail -s "JOINT_CALL_SUBMITTER.sh for CMG PIPELINE UPDATE ANALYSIS has submitted" \
+	# 		-r khetric1@jhmi.edu \
+	# 		cidr_sequencing_notifications@lists.johnshopkins.edu

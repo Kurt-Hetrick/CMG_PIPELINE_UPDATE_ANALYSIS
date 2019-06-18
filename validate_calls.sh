@@ -3,7 +3,7 @@
 # INPUT ARGUMENTS
 
 	INPUT_VCF=$1 # full path to multi-sample vcf that you are validating. needs to be tabix/bgzipped
-		INPUT_VCF_PREFIX=`basename $INPUT_VCF vcf.gz`
+		INPUT_VCF_PREFIX=`basename $INPUT_VCF .vcf.gz`
 	PHENODB_REPORT=$2 # path to the text file
 		PHENODB_REPORT_PREFIX=`basename $PHENODB_REPORT .txt`
 
@@ -142,20 +142,17 @@
 		awk '{print "tabix","'$INPUT_VCF'",$1":"$2"-"$3}' \
 		$WORKING_DIRECTORY/$PHENODB_REPORT_PREFIX".REFORMATED.INDEL.5bpPAD.fixed.bed" \
 			| bash \
-			| cut -f 1-8 \
 			| egrep -v "VariantType=SNP|VariantType=MULTIALLELIC_SNP" \
-			| sort -k 1,1n -k 2,2n \
 		>| $WORKING_DIRECTORY/$PHENODB_REPORT_PREFIX"_"$INPUT_VCF_PREFIX".REFORMATED.INDEL.5bpPAD.fixed.results.vcf"
 
 	# DECOMPOSE AND NORMALIZE
 
-		( tabix -H $INPUT_VCF | grep ^## ; \
-		tabix -H $INPUT_VCF | grep -v ^## | cut -f 1-8 ; \
-		cat $WORKING_DIRECTORY/$PHENODB_REPORT_PREFIX"_"$INPUT_VCF_PREFIX".REFORMATED.INDEL.5bpPAD.fixed.results.vcf" ) \
+		( tabix -H $INPUT_VCF ; \
+		awk '$1!="X"' $WORKING_DIRECTORY/$PHENODB_REPORT_PREFIX"_"$INPUT_VCF_PREFIX".REFORMATED.INDEL.5bpPAD.fixed.results.vcf" | sort -k 1,1n -k 2,2n ; \
+		awk '$1=="X"' $WORKING_DIRECTORY/$PHENODB_REPORT_PREFIX"_"$INPUT_VCF_PREFIX".REFORMATED.INDEL.5bpPAD.fixed.results.vcf" | sort -k 2,2n ) \
 			| vt decompose -s - \
 			| vt normalize -r $REFERENCE_GENOME - \
 		>| $WORKING_DIRECTORY/$PHENODB_REPORT_PREFIX"_"$INPUT_VCF_PREFIX".REFORMATED.INDEL.5bpPAD.fixed.results.DaN.vcf"
-
 
 	# REMOVE STAR ALLELES.
 

@@ -4,17 +4,31 @@
 
 	INPUT_VCF=$1 # full path to multi-sample vcf that you are validating. needs to be tabix/bgzipped
 		INPUT_VCF_PREFIX=`basename $INPUT_VCF .vcf.gz`
-	PHENODB_REPORT=$2 # path to the text file
+	PHENODB_REPORT=$2 # path to the text file # this actually isn't used in this script, because as is, it's a hot mess. it's for naming purposes now.
 		PHENODB_REPORT_PREFIX=`basename $PHENODB_REPORT .txt`
+	REFERENCE_BUILD=$3 # are you using grch37 or grch38 type in 37 or 38). if using 37 don't add argument (37 is the default)
 
 	# PHENODB_REPORT="/mnt/research/tools/LINUX/00_GIT_REPO_KURT/01_ARCHIVE/CMG_PIPELINE_UPDATE_ANALYSIS/results/FinalResultsSearch-28August2018.txt"
 
 # OTHER VARIABLES
 
 	WORKING_DIRECTORY="/mnt/research/tools/LINUX/00_GIT_REPO_KURT/01_ARCHIVE/CMG_PIPELINE_UPDATE_ANALYSIS/results"
-	REFERENCE_GENOME="/mnt/research/tools/PIPELINE_FILES/bwa_mem_0.7.5a_ref/human_g1k_v37_decoy.fasta"
-	CANDIDATE_SNPS_VCF="/mnt/research/tools/LINUX/00_GIT_REPO_KURT/01_ARCHIVE/CMG_PIPELINE_UPDATE_ANALYSIS/results/FinalResultsSearch-28August2018.REFORMATED.SNV.clean.ann.sites.vcf.gz"
-	CANDIDATE_INDELS_VCF="/mnt/research/tools/LINUX/00_GIT_REPO_KURT/01_ARCHIVE/CMG_PIPELINE_UPDATE_ANALYSIS/results/FinalResultsSearch-28August2018.REFORMATED.INDEL.5bpPAD.fixed.results.DaN.hand.vcf.gz"
+
+if [[ ! $REFERENCE_BUILD ]]
+	then
+		CANDIDATE_SNP_BED="/mnt/research/tools/LINUX/00_GIT_REPO_KURT/01_ARCHIVE/CMG_PIPELINE_UPDATE_ANALYSIS/results/FinalResultsSearch-28August2018.REFORMATED.SNV.bed"
+		CANDIDATE_INDEL_BED="/mnt/research/tools/LINUX/00_GIT_REPO_KURT/01_ARCHIVE/CMG_PIPELINE_UPDATE_ANALYSIS/results/FinalResultsSearch-28August2018.REFORMATED.INDEL.5bpPAD.fixed.bed"
+		REFERENCE_GENOME="/mnt/research/tools/PIPELINE_FILES/bwa_mem_0.7.5a_ref/human_g1k_v37_decoy.fasta"
+		CANDIDATE_SNPS_VCF="/mnt/research/tools/LINUX/00_GIT_REPO_KURT/01_ARCHIVE/CMG_PIPELINE_UPDATE_ANALYSIS/results/FinalResultsSearch-28August2018.REFORMATED.SNV.clean.ann.sites.vcf.gz"
+		CANDIDATE_INDELS_VCF="/mnt/research/tools/LINUX/00_GIT_REPO_KURT/01_ARCHIVE/CMG_PIPELINE_UPDATE_ANALYSIS/results/FinalResultsSearch-28August2018.REFORMATED.INDEL.5bpPAD.fixed.results.DaN.hand.vcf.gz"
+
+	else
+		CANDIDATE_SNP_BED="/mnt/research/tools/LINUX/00_GIT_REPO_KURT/01_ARCHIVE/CMG_PIPELINE_UPDATE_ANALYSIS/results/FinalResultsSearch-28August2018.REFORMATED.SNV.hg38.bed"
+		CANDIDATE_INDEL_BED="/mnt/research/tools/LINUX/00_GIT_REPO_KURT/01_ARCHIVE/CMG_PIPELINE_UPDATE_ANALYSIS/results/FinalResultsSearch-28August2018.REFORMATED.INDEL.5bpPAD.fixed.hg38.bed"
+		REFERENCE_GENOME="/mnt/shared_resources/public_resources/GRCh38DH/GRCh38_full_analysis_set_plus_decoy_hla.fa"
+		CANDIDATE_SNPS_VCF="/mnt/research/tools/LINUX/00_GIT_REPO_KURT/01_ARCHIVE/CMG_PIPELINE_UPDATE_ANALYSIS/results/FinalResultsSearch-28August2018.final.hg38.snp.vcf.gz"
+		CANDIDATE_INDELS_VCF="/mnt/research/tools/LINUX/00_GIT_REPO_KURT/01_ARCHIVE/CMG_PIPELINE_UPDATE_ANALYSIS/results/FinalResultsSearch-28August2018.final.hg38.indel.vcf.gz"
+fi
 
 	# this really needs to be an input variable, but this will do for now.
 	MASTER_KEY="/mnt/research/tools/LINUX/00_GIT_REPO_KURT/01_ARCHIVE/CMG_PIPELINE_UPDATE_ANALYSIS/results/MasterSampleKey_090418_11433_all.csv"
@@ -58,19 +72,29 @@
 
 	awk '{print "tabix",\
 	"'$INPUT_VCF'",$1":"$3"-"$3}' \
-	$WORKING_DIRECTORY/$PHENODB_REPORT_PREFIX".REFORMATED.SNV.bed" \
+	$CANDIDATE_SNP_BED \
 		| bash \
 		| egrep "VariantType=SNP|VariantType=MULTIALLELIC_SNP" \
 	>| $WORKING_DIRECTORY/$PHENODB_REPORT_PREFIX"_"$INPUT_VCF_PREFIX".REFORMATED.SNV.results.vcf"
 
 	# MAKE A DECOMPOSED, NORMALIZED AND SORTED BY REF VCF
 
-		( tabix -H $INPUT_VCF ; \
-		awk '$1!="X"' $WORKING_DIRECTORY/$PHENODB_REPORT_PREFIX"_"$INPUT_VCF_PREFIX".REFORMATED.SNV.results.vcf" | sort -k 1,1n -k 2,2n ; \
-		awk '$1=="X"' $WORKING_DIRECTORY/$PHENODB_REPORT_PREFIX"_"$INPUT_VCF_PREFIX".REFORMATED.SNV.results.vcf" | sort -k 2,2n ) \
-			| vt decompose -s - \
-			| vt normalize -r $REFERENCE_GENOME - \
-		>| $WORKING_DIRECTORY/$PHENODB_REPORT_PREFIX"_"$INPUT_VCF_PREFIX".REFORMATED.SNV.DaN.vcf"
+		if [[ ! $REFERENCE_BUILD ]]
+		then
+			( tabix -H $INPUT_VCF ; \
+			awk '$1!="X"' $WORKING_DIRECTORY/$PHENODB_REPORT_PREFIX"_"$INPUT_VCF_PREFIX".REFORMATED.SNV.results.vcf" | sort -k 1,1n -k 2,2n ; \
+			awk '$1=="X"' $WORKING_DIRECTORY/$PHENODB_REPORT_PREFIX"_"$INPUT_VCF_PREFIX".REFORMATED.SNV.results.vcf" | sort -k 2,2n ) \
+				| vt decompose -s - \
+				| vt normalize -r $REFERENCE_GENOME - \
+			>| $WORKING_DIRECTORY/$PHENODB_REPORT_PREFIX"_"$INPUT_VCF_PREFIX".REFORMATED.SNV.DaN.vcf"
+		else
+			( tabix -H $INPUT_VCF ; \
+			awk '$1!="chrX"' $WORKING_DIRECTORY/$PHENODB_REPORT_PREFIX"_"$INPUT_VCF_PREFIX".REFORMATED.SNV.results.vcf" | sed 's/^chr//g' | sort -k 1,1n -k 2,2n | awk '{print "chr"$0}' ; \
+			awk '$1=="chrX"' $WORKING_DIRECTORY/$PHENODB_REPORT_PREFIX"_"$INPUT_VCF_PREFIX".REFORMATED.SNV.results.vcf" | sed 's/^chr//g' | sort -k 2,2n | awk '{print "chr"$0}' ) \
+				| vt decompose -s - \
+				| vt normalize -r $REFERENCE_GENOME - \
+			>| $WORKING_DIRECTORY/$PHENODB_REPORT_PREFIX"_"$INPUT_VCF_PREFIX".REFORMATED.SNV.DaN.vcf"
+		fi
 
 	# REMOVE STAR ALLELES.
 
@@ -140,19 +164,29 @@
 	# GRAB THE INDEL RESULTS
 
 		awk '{print "tabix","'$INPUT_VCF'",$1":"$2"-"$3}' \
-		$WORKING_DIRECTORY/$PHENODB_REPORT_PREFIX".REFORMATED.INDEL.5bpPAD.fixed.bed" \
+		$CANDIDATE_INDEL_BED \
 			| bash \
 			| egrep -v "VariantType=SNP|VariantType=MULTIALLELIC_SNP" \
 		>| $WORKING_DIRECTORY/$PHENODB_REPORT_PREFIX"_"$INPUT_VCF_PREFIX".REFORMATED.INDEL.5bpPAD.fixed.results.vcf"
 
 	# DECOMPOSE AND NORMALIZE
 
-		( tabix -H $INPUT_VCF ; \
-		awk '$1!="X"' $WORKING_DIRECTORY/$PHENODB_REPORT_PREFIX"_"$INPUT_VCF_PREFIX".REFORMATED.INDEL.5bpPAD.fixed.results.vcf" | sort -k 1,1n -k 2,2n ; \
-		awk '$1=="X"' $WORKING_DIRECTORY/$PHENODB_REPORT_PREFIX"_"$INPUT_VCF_PREFIX".REFORMATED.INDEL.5bpPAD.fixed.results.vcf" | sort -k 2,2n ) \
-			| vt decompose -s - \
-			| vt normalize -r $REFERENCE_GENOME - \
-		>| $WORKING_DIRECTORY/$PHENODB_REPORT_PREFIX"_"$INPUT_VCF_PREFIX".REFORMATED.INDEL.5bpPAD.fixed.results.DaN.vcf"
+		if [[ ! $REFERENCE_BUILD ]]
+		then
+			( tabix -H $INPUT_VCF ; \
+			awk '$1!="X"' $WORKING_DIRECTORY/$PHENODB_REPORT_PREFIX"_"$INPUT_VCF_PREFIX".REFORMATED.INDEL.5bpPAD.fixed.results.vcf" | sort -k 1,1n -k 2,2n ; \
+			awk '$1=="X"' $WORKING_DIRECTORY/$PHENODB_REPORT_PREFIX"_"$INPUT_VCF_PREFIX".REFORMATED.INDEL.5bpPAD.fixed.results.vcf" | sort -k 2,2n ) \
+				| vt decompose -s - \
+				| vt normalize -r $REFERENCE_GENOME - \
+			>| $WORKING_DIRECTORY/$PHENODB_REPORT_PREFIX"_"$INPUT_VCF_PREFIX".REFORMATED.INDEL.5bpPAD.fixed.results.DaN.vcf"
+		else
+			( tabix -H $INPUT_VCF ; \
+			awk '$1!="chrX"' $WORKING_DIRECTORY/$PHENODB_REPORT_PREFIX"_"$INPUT_VCF_PREFIX".REFORMATED.INDEL.5bpPAD.fixed.results.vcf" | sed 's/^chr//g' | sort -k 1,1n -k 2,2n | awk '{print "chr"$0}' ; \
+			awk '$1=="X"' $WORKING_DIRECTORY/$PHENODB_REPORT_PREFIX"_"$INPUT_VCF_PREFIX".REFORMATED.INDEL.5bpPAD.fixed.results.vcf" | sed 's/^chr//g' | sort -k 2,2n | awk '{print "chr"$0}' ) \
+				| vt decompose -s - \
+				| vt normalize -r $REFERENCE_GENOME - \
+			>| $WORKING_DIRECTORY/$PHENODB_REPORT_PREFIX"_"$INPUT_VCF_PREFIX".REFORMATED.INDEL.5bpPAD.fixed.results.DaN.vcf"
+		fi
 
 	# REMOVE STAR ALLELES.
 
